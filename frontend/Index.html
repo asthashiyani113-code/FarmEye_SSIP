@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KhedutAI – Smart Farming</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g1:#0d3320;--g2:#1a5c38;--g3:#2d8653;--g4:#52b788;--g5:#95d5b2;--gp:#d8f3dc;
+  --a1:#b45309;--a2:#f59e0b;--al:#fef3c7;
+  --br:#7c3d11;--cr:#fffbeb;
+  --tx:#0f1f15;--tm:#2d5a3d;--tl:#5a8c6e;
+  --bd:#e2f0e8;--wh:#ffffff;
+  --r:16px;--rs:10px;
+}
+body{font-family:'Outfit',sans-serif;color:var(--tx);overflow-x:hidden;min-height:100vh}
+
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+@keyframes floatSlow{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-20px) rotate(6deg)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.92)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes ripple{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.2);opacity:0}}
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes pop{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+.su{animation:slideUp .5s ease-out forwards}
+.si{animation:slideIn .5s ease-out forwards}
+.fi{animation:fadeIn .4s ease-out}
+.pop{animation:pop .4s cubic-bezier(.34,1.56,.64,1) forwards}
+
+input,select,textarea{
+  font-family:inherit;font-size:15px;outline:none;width:100%;
+  padding:11px 15px;border:1.5px solid #c8e6d4;border-radius:var(--rs);
+  background:#f4fbf7;transition:border-color .2s,box-shadow .2s,background .2s;
+  color:var(--tx);
+}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--g3);box-shadow:0 0 0 3px rgba(45,134,83,.14);background:#fff;
+}
+button{font-family:inherit;cursor:pointer;border:none;outline:none}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:var(--g5);border-radius:3px}
+
+.card{background:#fff;border-radius:var(--r);box-shadow:0 2px 20px rgba(13,51,32,.07)}
+.hover-lift{transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;cursor:pointer}
+.hover-lift:hover{transform:translateY(-6px);box-shadow:0 16px 48px rgba(13,51,32,.13)}
+
+.tag{display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.04em}
+.tag-green{background:#d8f3dc;color:#1a5c38}
+.tag-amber{background:#fef3c7;color:#92400e}
+.tag-red{background:#fee2e2;color:#991b1b}
+.tag-blue{background:#dbeafe;color:#1e40af}
+
+.ripple-btn{position:relative;overflow:hidden}
+.ripple-btn::after{content:'';position:absolute;border-radius:50%;background:rgba(255,255,255,.3);width:100%;height:100%;top:0;left:0;transform:scale(0);transition:transform .6s,opacity .6s}
+.ripple-btn:active::after{transform:scale(2.5);opacity:0;transition:0s}
+
+/* NAVBAR */
+#navbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(13,51,32,.97);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(82,183,136,.2);
+}
+#navbar .inner{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;height:64px;gap:12}
+#nav-logo{display:flex;align-items:center;gap:10;cursor:pointer;flex-shrink:0}
+#nav-logo .logo-icon{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#52b788,#2d8653);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 12px rgba(82,183,136,.4)}
+#nav-logo .logo-name{font-size:18px;font-weight:700;color:#fff;line-height:1}
+#nav-logo .logo-sub{font-size:11px;color:#95d5b2;letter-spacing:.05em}
+#nav-links{flex:1;display:flex;gap:4;justify-content:center;flex-wrap:wrap}
+#nav-links button{background:transparent;color:rgba(255,255,255,.75);border:1px solid transparent;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:500;transition:all .2s}
+#nav-links button.active{background:rgba(82,183,136,.2);color:#95d5b2;border-color:rgba(82,183,136,.4)}
+#nav-links button:hover:not(.active){background:rgba(82,183,136,.1);color:#fff}
+#nav-controls{display:flex;align-items:center;gap:8;flex-shrink:0}
+#btn-voice-nav{background:rgba(82,183,136,.15);border:1px solid rgba(82,183,136,.3);color:#95d5b2;border-radius:8px;padding:6px 10px;font-size:16px}
+#lang-select{background:rgba(82,183,136,.15);border:1px solid rgba(82,183,136,.3);color:#95d5b2;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;width:auto}
+#lang-select option{background:#0d3320;color:#fff}
+
+/* SECTIONS */
+.section{display:none}
+.section.active{display:block}
+
+/* HERO */
+#hero{
+  min-height:92vh;display:flex;flex-direction:column;
+  background:linear-gradient(135deg,#0d3320 0%,#1a5c38 40%,#2d8653 70%,#1a4a2e 100%);
+  position:relative;overflow:hidden;
+}
+.hero-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.hero-orb1{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(82,183,136,.15) 0%,transparent 70%);top:-100px;left:-100px;animation:float 8s ease-in-out infinite}
+.hero-orb2{position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,.1) 0%,transparent 70%);bottom:-50px;right:-50px;animation:float 6s ease-in-out infinite 2s}
+.hero-grid{position:absolute;inset:0;opacity:.05;background-image:linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px);background-size:60px 60px}
+.hero-particle{position:absolute;opacity:.25;pointer-events:none;animation:floatSlow 4s ease-in-out infinite}
+.hero-content{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 20px 40px;position:relative;z-index:2}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(82,183,136,.2);border:1px solid rgba(82,183,136,.4);border-radius:30px;padding:8px 20px;margin-bottom:28px;color:#95d5b2;font-size:13px;font-weight:600;letter-spacing:.05em}
+.hero-badge .dot{width:8px;height:8px;border-radius:50%;background:#52b788;display:inline-block;animation:pulse 1.5s ease-in-out infinite}
+.hero-h1{font-size:clamp(36px,7vw,80px);font-weight:800;color:#fff;line-height:1.1;margin-bottom:8px;text-shadow:0 4px 30px rgba(0,0,0,.3)}
+.hero-h2{font-size:clamp(30px,5.5vw,64px);font-weight:700;background:linear-gradient(135deg,#95d5b2,#52b788,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2;margin-bottom:28px}
+.hero-desc{font-size:clamp(15px,2vw,19px);color:rgba(255,255,255,.75);max-width:580px;margin-bottom:40px;line-height:1.6}
+.hero-btns{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.hero-btn1{background:linear-gradient(135deg,#2d8653,#52b788);color:#fff;padding:15px 28px;border-radius:12px;font-size:15px;font-weight:700;box-shadow:0 8px 24px rgba(45,134,83,.4);transition:all .25s;border:none}
+.hero-btn1:hover{transform:translateY(-3px)}
+.hero-btn2{background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);color:#fff;padding:15px 28px;border-radius:12px;font-size:15px;font-weight:600;backdrop-filter:blur(8px);transition:all .25s}
+.hero-btn2:hover{background:rgba(255,255,255,.2)}
+.hero-btn3{background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;padding:15px 28px;border-radius:12px;font-size:15px;font-weight:700;box-shadow:0 8px 24px rgba(245,158,11,.35);transition:all .25s;border:none}
+.hero-btn3:hover{transform:translateY(-3px)}
+.hero-stats{background:rgba(0,0,0,.25);backdrop-filter:blur(12px);border-top:1px solid rgba(82,183,136,.2);padding:20px;position:relative;z-index:2}
+.hero-stats .inner{max-width:900px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.stat-val{font-size:clamp(20px,3vw,32px);font-weight:800;color:#52b788}
+.stat-label{font-size:12px;color:rgba(255,255,255,.6);margin-top:2px}
+
+/* FEATURES */
+#feats-section{padding:80px 20px;background:#f4fbf7}
+.feats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.feat-card{padding:28px 24px;cursor:pointer}
+.feat-card h3{font-size:18px;font-weight:700;color:var(--g1);margin-bottom:8px}
+.feat-card p{font-size:14px;color:var(--tl);line-height:1.6}
+.feat-more{margin-top:16px;color:#2d8653;font-size:13px;font-weight:600;display:flex;align-items:center;gap:4px}
+
+/* CROP DETECTION */
+#crops-section{min-height:80vh;padding:60px 20px;background:#fff}
+.crop-grid{display:grid;gap:32px;max-width:680px;margin:0 auto}
+.crop-grid.has-result{grid-template-columns:1fr 1fr;max-width:1100px}
+.dropzone{border:2.5px dashed #95d5b2;border-radius:16px;padding:40px 20px;text-align:center;cursor:pointer;background:#f4fbf7;transition:all .2s;margin-bottom:16px}
+.dropzone.drag-over{border-color:#2d8653;background:#d8f3dc}
+.dropzone img{max-height:250px;max-width:100%;border-radius:12px;object-fit:contain}
+.upload-btns{display:flex;gap:10px;margin-bottom:16px}
+.btn-upload{flex:1;background:var(--gp);color:var(--g1);border:1.5px solid #95d5b2;border-radius:10px;padding:11px;font-size:14px;font-weight:600}
+.btn-camera{flex:1;background:var(--al);color:var(--br);border:1.5px solid #fcd34d;border-radius:10px;padding:11px;font-size:14px;font-weight:600}
+.btn-analyze{width:100%;padding:15px;border-radius:12px;font-size:16px;font-weight:700;transition:all .25s}
+.btn-analyze:enabled{background:linear-gradient(135deg,#1a5c38,#2d8653);color:#fff;box-shadow:0 6px 20px rgba(26,92,56,.3)}
+.btn-analyze:disabled{background:#e8f5ee;color:#95d5b2;cursor:not-allowed}
+.spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .8s linear infinite}
+.err-box{background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:14px;margin-bottom:12px}
+.health-banner{border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px}
+.health-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.result-row{background:#f8fdf9;border:1px solid #c8e6d4;border-radius:10px;padding:12px 16px;display:flex;gap:12;align-items:flex-start;margin-bottom:8px}
+.result-label{font-size:13px;color:var(--tl);font-weight:600;min-width:130px;flex-shrink:0}
+.result-val{font-size:14px;color:var(--tx);font-weight:500;flex:1}
+
+/* SOIL */
+#soil-section{min-height:80vh;padding:60px 20px;background:#fffbeb}
+.soil-grid{display:grid;gap:32px;max-width:560px;margin:0 auto}
+.soil-grid.has-result{grid-template-columns:1fr 1.2fr;max-width:1000px}
+.btn-soil{width:100%;padding:15px;border-radius:12px;font-size:16px;font-weight:700;transition:all .25s}
+.btn-soil:enabled{background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;box-shadow:0 6px 20px rgba(245,158,11,.3)}
+.btn-soil:disabled{background:#e8f5ee;color:#95d5b2;cursor:not-allowed}
+.soil-result{padding:28px;overflow-y:auto;max-height:600px}
+.soil-result-line{font-size:14px;color:var(--tx);line-height:1.8;padding:2px 0}
+.soil-result-line.heading{font-weight:700;color:var(--g2);margin-top:14px;margin-bottom:4px}
+.soil-result-line.bullet{padding-left:16px;border-left:2px solid #95d5b2;margin-bottom:4px}
+
+/* WEATHER */
+#weather-section{min-height:80vh;padding:60px 20px;background:#f0fdf4}
+.weather-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px}
+.weather-card{padding:24px;text-align:center}
+.weather-charts{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px}
+.chart-box{padding:24px}
+.chart-box h3{font-size:16px;font-weight:700;color:var(--g1);margin-bottom:20px}
+.alert-item{border-radius:10px;padding:12px 16px;display:flex;gap:12px;align-items:flex-start;margin-bottom:8px}
+
+/* MARKETPLACE */
+#market-section{min-height:80vh;padding:60px 20px;background:#fff}
+.market-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:40px;flex-wrap:wrap;gap:16px}
+.cat-filters{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap}
+.cat-btn{background:#f4fbf7;color:#2d5a3d;border:1.5px solid #c8e6d4;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;transition:all .2s}
+.cat-btn.active{background:#1a5c38;color:#fff;border-color:#1a5c38}
+.market-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.market-item{padding:20px;position:relative}
+.market-badge{position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+.item-cat{display:inline-block;font-size:11px;font-weight:600;background:#f4fbf7;color:#2d5a3d;padding:2px 10px;border-radius:20px;margin-bottom:8px}
+.item-btns{display:flex;gap:8px;margin-top:16px}
+.btn-cart{flex:1;padding:10px;border-radius:9px;font-size:13px;font-weight:600;background:#d8f3dc;color:#1a5c38;border:1.5px solid #95d5b2}
+.btn-buy{flex:1;padding:10px;border-radius:9px;font-size:13px;font-weight:600;background:linear-gradient(135deg,#1a5c38,#2d8653);color:#fff;border:none}
+
+/* DASHBOARD */
+#dash-section{min-height:80vh;padding:60px 20px;background:#f4fbf7}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+.kpi-card{padding:22px}
+.dash-charts{display:grid;grid-template-columns:1.4fr 1fr;gap:20px;margin-bottom:20px}
+.reco-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.reco-item{background:#f8fdf9;border:1px solid #c8e6d4;border-radius:10px;padding:14px 16px}
+.reco-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+
+/* CHAT */
+#chat-fab{position:fixed;bottom:28px;right:28px;z-index:200}
+#chat-fab-btn{width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#1a5c38,#52b788);color:#fff;font-size:26px;box-shadow:0 8px 32px rgba(26,92,56,.45);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer}
+#chat-window{display:none;position:fixed;bottom:28px;right:28px;z-index:200;width:360px;max-height:520px;background:#fff;border-radius:20px;box-shadow:0 24px 80px rgba(13,51,32,.25);border:1px solid #c8e6d4;flex-direction:column;overflow:hidden;font-family:'Outfit',sans-serif}
+#chat-window.open{display:flex}
+#chat-header{background:linear-gradient(135deg,#0d3320,#1a5c38);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#chat-avatar{width:36px;height:36px;border-radius:50%;background:rgba(82,183,136,.3);display:flex;align-items:center;justify-content:center;font-size:18px}
+#chat-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#f8fdf9}
+.chat-msg{display:flex}
+.chat-msg.user{justify-content:flex-end}
+.chat-bubble{max-width:82%;padding:10px 14px;font-size:14px;line-height:1.6;box-shadow:0 2px 8px rgba(13,51,32,.08)}
+.chat-bubble.assistant{border-radius:14px 14px 14px 4px;background:#fff;color:var(--tx);border:1px solid #d8f3dc}
+.chat-bubble.user{border-radius:14px 14px 4px 14px;background:linear-gradient(135deg,#1a5c38,#2d8653);color:#fff}
+.typing-dots{display:flex;gap:6px;padding:10px 14px;background:#fff;border-radius:14px 14px 14px 4px;width:fit-content;border:1px solid #d8f3dc;box-shadow:0 2px 8px rgba(13,51,32,.06)}
+.typing-dot{width:8px;height:8px;border-radius:50%;background:#52b788;display:inline-block;animation:blink 1.2s ease-in-out infinite}
+#chat-input-area{padding:12px 14px;border-top:1px solid #e8f5ee;display:flex;gap:8px;background:#fff;flex-shrink:0}
+#chat-input{flex:1;padding:10px 14px;font-size:14px;border-radius:10px;background:#f4fbf7;border:1.5px solid #c8e6d4}
+#chat-send{background:linear-gradient(135deg,#1a5c38,#2d8653);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;opacity:.5}
+#chat-send:enabled{opacity:1}
+
+/* VOICE MODAL */
+#voice-modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(13,51,32,.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px}
+#voice-modal.open{display:flex}
+#voice-modal-inner{background:#fff;border-radius:24px;padding:40px 32px;max-width:440px;width:100%;text-align:center;box-shadow:0 32px 80px rgba(13,51,32,.3);position:relative}
+#voice-close{position:absolute;top:20px;right:20px;background:#f4fbf7;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--tl)}
+#voice-mic-wrap{position:relative;display:inline-flex;margin-bottom:28px}
+.ripple-ring{position:absolute;border-radius:50%;pointer-events:none;animation:ripple 1.5s ease-out infinite}
+#voice-mic{width:88px;height:88px;border-radius:50%;border:none;color:#fff;font-size:32px;cursor:pointer;transition:all .3s;position:relative;z-index:1}
+#voice-status{font-size:16px;font-weight:700;color:var(--g2);margin-bottom:20px}
+#voice-transcript{background:#f4fbf7;border:1px solid #c8e6d4;border-radius:12px;padding:14px 16px;margin-bottom:12px;text-align:left;display:none}
+#voice-response{background:#d8f3dc;border:1px solid #95d5b2;border-radius:12px;padding:14px 16px;text-align:left;display:none}
+#voice-stop{display:none;margin-top:16px;padding:10px 24px;border-radius:10px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-size:13px;font-weight:600;cursor:pointer}
+
+/* FOOTER */
+footer{background:linear-gradient(135deg,#0d3320,#1a5c38);padding:48px 20px 24px;font-family:'Outfit',sans-serif}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px;margin-bottom:40px;flex-wrap:wrap}
+.footer-nav-item{color:rgba(255,255,255,.6);font-size:14px;margin-bottom:8px;cursor:pointer;transition:color .2s}
+.footer-nav-item:hover{color:#95d5b2}
+.footer-social{display:flex;gap:10px;margin-top:16px}
+.social-btn{width:36px;height:36px;border-radius:8px;background:rgba(82,183,136,.2);display:flex;align-items:center;justify-content:center;font-size:17px;border:1px solid rgba(82,183,136,.3);cursor:pointer}
+.footer-copy{border-top:1px solid rgba(82,183,136,.2);padding-top:20px;text-align:center;color:rgba(255,255,255,.4);font-size:12px}
+
+/* SECTION HEAD */
+.section-head{text-align:center;margin-bottom:48px}
+.section-head h2{font-size:clamp(26px,4vw,42px);font-weight:800;color:var(--g1);margin-bottom:8px}
+.section-head p{font-size:16px;color:var(--tl)}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  #nav-links{display:none}
+  .hero-stats .inner{grid-template-columns:repeat(2,1fr)}
+  .weather-charts,.dash-charts{grid-template-columns:1fr}
+  .footer-grid{grid-template-columns:1fr}
+  .crop-grid.has-result{grid-template-columns:1fr}
+  .soil-grid.has-result{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav id="navbar">
+  <div class="inner">
+    <div id="nav-logo" onclick="navigate('home')">
+      <div class="logo-icon">🌾</div>
+      <div>
+        <div class="logo-name" id="nav-brand">KhedutAI</div>
+        <div class="logo-sub" id="nav-brand-sub">Smart Farming</div>
+      </div>
+    </div>
+    <div id="nav-links"></div>
+    <div id="nav-controls">
+      <button id="btn-voice-nav" onclick="openVoice()" title="Voice Assistant">🗣️</button>
+      <select id="lang-select" onchange="setLang(this.value)">
+        <option value="en">EN</option>
+        <option value="hi">हिं</option>
+        <option value="gu">ગુ</option>
+      </select>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN SECTIONS -->
+<main id="main-content"></main>
+
+<!-- FOOTER -->
+<footer>
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="footer-grid" id="footer-grid"></div>
+    <div class="footer-copy" id="footer-copy"></div>
+  </div>
+</footer>
+
+<!-- FLOATING CHAT -->
+<div id="chat-fab">
+  <button id="chat-fab-btn" onclick="toggleChat()">🌾</button>
+</div>
+<div id="chat-window">
+  <div id="chat-header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="chat-avatar">🤖</div>
+      <div>
+        <div style="color:#fff;font-weight:700;font-size:15px">KhedutAI</div>
+        <div style="color:#95d5b2;font-size:11px;display:flex;align-items:center;gap:4px">
+          <span style="width:6px;height:6px;border-radius:50%;background:#52b788;display:inline-block"></span>
+          AI Farming Assistant
+        </div>
+      </div>
+    </div>
+    <button id="chat-close" onclick="toggleChat()">×</button>
+  </div>
+  <div id="chat-messages"></div>
+  <div id="chat-input-area">
+    <input id="chat-input" placeholder="Ask about crops, diseases..." onkeydown="if(event.key==='Enter')sendChat()"/>
+    <button id="chat-send" onclick="sendChat()" disabled>↑</button>
+  </div>
+</div>
+
+<!-- VOICE MODAL -->
+<div id="voice-modal">
+  <div id="voice-modal-inner" class="pop">
+    <button id="voice-close" onclick="closeVoice()">×</button>
+    <div style="font-size:48px;margin-bottom:12px">🗣️</div>
+    <h2 style="font-size:22px;font-weight:800;color:var(--g1);margin-bottom:4px" id="voice-head"></h2>
+    <p style="font-size:14px;color:var(--tl);margin-bottom:32px" id="voice-sub"></p>
+    <div id="voice-mic-wrap">
+      <button id="voice-mic" onclick="toggleVoice()">🎤</button>
+    </div>
+    <div id="voice-status"></div>
+    <div id="voice-transcript">
+      <div style="font-size:11px;font-weight:700;color:var(--tl);margin-bottom:4px">YOU SAID:</div>
+      <div id="voice-transcript-text" style="font-size:14px;color:var(--tx)"></div>
+    </div>
+    <div id="voice-response">
+      <div style="font-size:11px;font-weight:700;color:var(--g2);margin-bottom:4px">🤖 AI RESPONSE:</div>
+      <div id="voice-response-text" style="font-size:13px;color:var(--tx);line-height:1.6"></div>
+    </div>
+    <button id="voice-stop" onclick="stopVoice()">Stop</button>
+  </div>
+</div>
+
+<script>
+// ─── TRANSLATIONS ──────────────────────────────────────────────────
+const T = {
+  en:{
+    brand:"KhedutAI",brandSub:"Smart Farming",
+    nav:["Home","Features","Crop AI","Soil","Weather","Market","Dashboard"],
+    tagline:"Smart AI Farming",tagline2:"Assistant for Every Farmer",
+    heroDesc:"Instant crop disease detection · Soil analysis · Personalized farming advice in your language",
+    btn1:"📷 Upload Crop Image",btn2:"📸 Capture Image",btn3:"✨ Try AI Demo",
+    statsLabel:["Crops Analyzed","Farmers Served","Diseases Detected","Accuracy Rate"],
+    statsVal:["2.4M+","180K+","95K+","96.8%"],
+    featHead:"Powerful AI Features",featSub:"Built for every Indian farmer with world-class AI",
+    feats:[
+      {icon:"🌾",t:"Crop Disease AI",d:"Upload crop images for instant AI-powered disease & pest detection with treatment plans"},
+      {icon:"🧪",t:"Soil Analysis",d:"AI soil health assessment based on pH, moisture, nutrients with fertilizer recommendations"},
+      {icon:"🌤️",t:"Weather Alerts",d:"Hyperlocal weather forecasts with farming-specific guidance and rain predictions"},
+      {icon:"🗣️",t:"Voice Assistant",d:"Ask farming questions in Gujarati, Hindi or English — AI responds in your language"},
+      {icon:"📊",t:"Farm Dashboard",d:"Track crop health, water usage, harvest predictions and farm analytics in real time"},
+      {icon:"🛒",t:"Agri Marketplace",d:"Buy certified seeds, fertilizers, pesticides & tools from trusted suppliers nearby"},
+    ],
+    cropHead:"AI Crop Disease Detection",cropSub:"Upload or capture your crop image for instant AI diagnosis",
+    dropzone:"📁 Click to upload or drag & drop your crop image here",dropSub:"Supports JPG, PNG, WEBP up to 10MB",
+    analyzeBtn:"🔍 Analyze with AI",analyzing:"AI is analyzing your crop...",
+    rLabels:["🌿 Crop Detected","❤️ Health Status","🦠 Disease Found","📊 Confidence","🐛 Pest Detection","🌱 Nutrition Gap","💧 Water Need","🌿 Fertilizer","🧴 Pesticide","💊 Treatment Steps","🌾 Harvest Status"],
+    soilHead:"Smart Soil Analysis",soilSub:"Enter your soil data for AI-powered recommendations",
+    sf1:"Soil Type",sf2:"Soil pH (0–14)",sf3:"Moisture Level (%)",sf4:"Crop Name",
+    soilTypes:["Sandy","Clay","Loam","Silt","Black Cotton","Red Laterite","Alluvial"],
+    soilBtn:"🧪 Analyze Soil with AI",
+    weatherHead:"Weather Dashboard",marketHead:"Agri Marketplace",buyNow:"Buy Now",healthyCrops:"Healthy Crops",dashHead:"Farm Analytics Dashboard",
+    chatHead:"AI Farming Assistant",chatPH:"Ask me about crops, diseases, fertilizers...",chatSend:"Send",
+    voiceHead:"Voice Assistant",voiceSub:"Speak in Gujarati, Hindi or English",
+    voiceTap:"Tap mic to speak",voiceListen:"Listening...",voiceProcess:"Processing...",
+    footer:"AI-powered farming assistant for every Indian farmer. Available in Gujarati, Hindi & English.",
+    copy:"© 2025 KhedutAI · Made with ❤️ for Indian Farmers",
+  },
+  hi:{
+    brand:"खेड़ुत AI",brandSub:"स्मार्ट खेती",
+    nav:["होम","सुविधाएं","फसल AI","मिट्टी","मौसम","बाज़ार","डैशबोर्ड"],
+    tagline:"स्मार्ट AI खेती",tagline2:"हर किसान का सहायक",
+    heroDesc:"तुरंत फसल रोग पहचान · मिट्टी विश्लेषण · आपकी भाषा में व्यक्तिगत खेती सलाह",
+    btn1:"📷 फसल तस्वीर अपलोड करें",btn2:"📸 तस्वीर खींचें",btn3:"✨ AI डेमो आज़माएं",
+    statsLabel:["फसल विश्लेषण","किसान सेवित","रोग पहचाने","सटीकता दर"],
+    statsVal:["24 लाख+","1.8 लाख+","95 हज़ार+","96.8%"],
+    featHead:"शक्तिशाली AI सुविधाएं",featSub:"विश्वस्तरीय AI के साथ हर भारतीय किसान के लिए",
+    feats:[
+      {icon:"🌾",t:"फसल रोग AI",d:"तुरंत AI फसल रोग और कीट पहचान के लिए तस्वीर अपलोड करें"},
+      {icon:"🧪",t:"मिट्टी विश्लेषण",d:"pH, नमी, पोषक तत्वों के आधार पर AI मिट्टी आकलन"},
+      {icon:"🌤️",t:"मौसम अलर्ट",d:"स्थानीय मौसम पूर्वानुमान और खेती-विशिष्ट मार्गदर्शन"},
+      {icon:"🗣️",t:"आवाज़ सहायक",d:"गुजराती, हिंदी या अंग्रेजी में आवाज़ से खेती के सवाल पूछें"},
+      {icon:"📊",t:"फार्म डैशबोर्ड",d:"फसल स्वास्थ्य, पानी के उपयोग और कटाई का रियल-टाइम ट्रैक"},
+      {icon:"🛒",t:"कृषि बाज़ार",d:"प्रमाणित बीज, उर्वरक, कीटनाशक और उपकरण ऑनलाइन खरीदें"},
+    ],
+    cropHead:"AI फसल रोग जांच",cropSub:"तुरंत AI निदान के लिए फसल की तस्वीर अपलोड या कैप्चर करें",
+    dropzone:"📁 क्लिक करें या यहाँ फसल की तस्वीर खींचें",dropSub:"JPG, PNG, WEBP 10MB तक समर्थित",
+    analyzeBtn:"🔍 AI से जांच करें",analyzing:"AI आपकी फसल का विश्लेषण कर रहा है...",
+    rLabels:["🌿 पहचानी फसल","❤️ स्वास्थ्य स्थिति","🦠 मिला रोग","📊 विश्वसनीयता","🐛 कीट पहचान","🌱 पोषण कमी","💧 पानी जरूरत","🌿 उर्वरक","🧴 कीटनाशक","💊 उपचार","🌾 कटाई स्थिति"],
+    soilHead:"स्मार्ट मिट्टी विश्लेषण",soilSub:"AI आधारित सिफारिशों के लिए मिट्टी का डेटा दर्ज करें",
+    sf1:"मिट्टी का प्रकार",sf2:"मिट्टी pH (0–14)",sf3:"नमी स्तर (%)",sf4:"फसल का नाम",
+    soilTypes:["बलुई","मिट्टी","दोमट","गाद","काली मिट्टी","लाल मिट्टी","जलोढ़"],
+    soilBtn:"🧪 AI से मिट्टी जांच करें",
+    weatherHead:"मौसम डैशबोर्ड",marketHead:"कृषि बाज़ार",buyNow:"अभी खरीदें",healthyCrops:"स्वस्थ फसल",dashHead:"फार्म विश्लेषण डैशबोर्ड",
+    chatHead:"AI खेती सहायक",chatPH:"फसल, रोग, उर्वरक के बारे में पूछें...",chatSend:"भेजें",
+    voiceHead:"आवाज़ सहायक",voiceSub:"गुजराती, हिंदी या अंग्रेजी में बोलें",
+    voiceTap:"बोलने के लिए माइक टैप करें",voiceListen:"सुन रहा हूं...",voiceProcess:"विश्लेषण हो रहा है...",
+    footer:"हर भारतीय किसान के लिए AI-संचालित खेती सहायक। गुजराती, हिंदी और अंग्रेजी में।",
+    copy:"© 2025 खेड़ुत AI · भारतीय किसानों के लिए ❤️ से बनाया",
+  },
+  gu:{
+    brand:"ખેડૂત AI",brandSub:"સ્માર્ટ ખેતી",
+    nav:["હોમ","સુવિધાઓ","પાક AI","જમીન","હવામાન","બજાર","ડેશબોર્ડ"],
+    tagline:"સ્માર્ટ AI ખેતી",tagline2:"દરેક ખેડૂત માટે સહાયક",
+    heroDesc:"તાત્કાલિક પાક રોગ શોધ · જમીન વિશ્લેષણ · તમારી ભાષામાં વ્યક્તિગત ખેતી સલાહ",
+    btn1:"📷 પાકનો ફોટો અપલોડ કરો",btn2:"📸 ફોટો પાડો",btn3:"✨ AI ડેમો અજમાવો",
+    statsLabel:["પાક વિશ્લેષણ","ખેડૂતોને સેવા","રોગ શોધાયા","ચોકસાઈ દર"],
+    statsVal:["24 લાખ+","1.8 લાખ+","95 હજાર+","96.8%"],
+    featHead:"શક્તિશાળી સુવિધાઓ",featSub:"વિશ્વસ્તરીય AI સાથે દરેક ભારતીય ખેડૂત માટે",
+    feats:[
+      {icon:"🌾",t:"પાક રોગ AI",d:"તાત્કાલિક AI પાક રોગ અને જીવાત ઓળખ માટે ફોટો અપલોડ કરો"},
+      {icon:"🧪",t:"જમીન વિશ્લેષણ",d:"pH, ભેજ અને પોષક તત્ત્વોના આધારે AI જમીનનું મૂલ્યાંકન"},
+      {icon:"🌤️",t:"હવામાન ચેતવણી",d:"સ્થાનિક હવામાન આગાહી અને ખેતી-વિશિષ્ટ માર્ગદર્શન"},
+      {icon:"🗣️",t:"અવાજ સહાયક",d:"ગુજરાતી, હિન્દી અથવા અંગ્રેજીમાં અવાજ દ્વારા પ્રશ્નો પૂછો"},
+      {icon:"📊",t:"ફાર્મ ડેશબોર્ડ",d:"પાક આરોગ્ય, પાણી વપરાશ અને લણણી આગાહી ટ્રેક કરો"},
+      {icon:"🛒",t:"કૃષિ બજાર",d:"પ્રમાણિત બીજ, ખાતર અને જંતુનાશક ઓનલાઇન ખરીદો"},
+    ],
+    cropHead:"AI પાક રોગ તપાસ",cropSub:"તાત્કાલિક AI નિદાન માટે પાકનો ફોટો અપલોડ કરો",
+    dropzone:"📁 ક્લિક કરો અથવા પાકનો ફોટો અહીં ખેંચો",dropSub:"JPG, PNG, WEBP 10MB સુધી સમર્થિત",
+    analyzeBtn:"🔍 AI સાથે તપાસ કરો",analyzing:"AI તમારા પાકનું વિશ્લેષણ કરી રહ્યું છે...",
+    rLabels:["🌿 ઓળખાયેલ પાક","❤️ આરોગ્ય સ્થિતિ","🦠 મળેલ રોગ","📊 વિશ્વાસ","🐛 જીવાત ઓળખ","🌱 પોષણ ઊણપ","💧 પાણીની જરૂર","🌿 ખાતર","🧴 જંતુનાશક","💊 સારવાર","🌾 લણણી સ્થિતિ"],
+    soilHead:"સ્માર્ટ જમીન વિશ્લેષણ",soilSub:"AI ભલામણ માટે જમીનનો ડેટા દાખલ કરો",
+    sf1:"જમીનનો પ્રકાર",sf2:"જમીન pH (0–14)",sf3:"ભેજ સ્તર (%)",sf4:"પાકનું નામ",
+    soilTypes:["રેતાળ","કાદવાળી","દોમટ","ગાદ","કાળી માટી","લાલ માટી","નદીની માટી"],
+    soilBtn:"🧪 AI સાથે જમીન તપાસો",
+    weatherHead:"હવામાન ડેશબોર્ડ",marketHead:"કૃષિ બજાર",buyNow:"હમણાં ખરીદો",healthyCrops:"સ્વસ્થ પાક",dashHead:"ફાર્મ વિશ્લેષણ ડેશબોર્ડ",
+    chatHead:"AI ખેતી સહાયક",chatPH:"પાક, રોગ, ખાતર વિશે પૂછો...",chatSend:"મોકલો",
+    voiceHead:"અવાજ સહાયક",voiceSub:"ગુજરાતી, હિન્દી અથવા અંગ્રેજીમાં બોલો",
+    voiceTap:"બોલવા માટે માઇક પર ટૅપ કરો",voiceListen:"સાંભળી રહ્યું છે...",voiceProcess:"પ્રક્રિયા ચાલી રહી છે...",
+    footer:"દરેક ભારતીય ખેડૂત માટે AI-સંચાલિત ખેતી સહાયક. ગુજરાતી, હિન્દી અને અંગ્રેજીમાં.",
+    copy:"© 2025 ખેડૂત AI · ભારતીય ખેડૂતો માટે ❤️ સાથે",
+  }
+};
+
+// ─── MOCK DATA ──────────────────────────────────────────────────────
+const WEATHER_DATA=[
+  {day:"Mon",temp:32,rain:20,humidity:68},{day:"Tue",temp:29,rain:60,humidity:82},
+  {day:"Wed",temp:27,rain:80,humidity:88},{day:"Thu",temp:31,rain:30,humidity:72},
+  {day:"Fri",temp:34,rain:10,humidity:55},{day:"Sat",temp:33,rain:15,humidity:58},
+  {day:"Sun",temp:30,rain:45,humidity:75},
+];
+const HEALTH_DATA=[{name:"Healthy",value:68},{name:"At Risk",value:20},{name:"Diseased",value:12}];
+const PIE_COLORS=["#52b788","#f59e0b","#ef4444"];
+const HARVEST_DATA=[
+  {month:"Jan",yield:24},{month:"Feb",yield:18},{month:"Mar",yield:32},
+  {month:"Apr",yield:28},{month:"May",yield:41},{month:"Jun",yield:35},
+];
+const MARKET_ITEMS=[
+  {id:1,name:"Premium Cotton Seeds",cat:"Seeds",price:"₹1,240",unit:"/kg",rating:4.8,reviews:234,badge:"Best Seller",icon:"🌱",org:false},
+  {id:2,name:"NPK Fertilizer 19:19:19",cat:"Fertilizer",price:"₹890",unit:"/50kg",rating:4.6,reviews:189,badge:"AI Pick",icon:"🧪",org:false},
+  {id:3,name:"Neem Bio Pesticide",cat:"Pesticide",price:"₹560",unit:"/litre",rating:4.9,reviews:412,badge:"Organic",icon:"🌿",org:true},
+  {id:4,name:"Drip Irrigation Kit",cat:"Tools",price:"₹4,200",unit:"/set",rating:4.7,reviews:98,badge:"New",icon:"💧",org:false},
+  {id:5,name:"Wheat HYV Seeds",cat:"Seeds",price:"₹780",unit:"/kg",rating:4.5,reviews:167,badge:"",icon:"🌾",org:false},
+  {id:6,name:"Micronutrient Mix",cat:"Fertilizer",price:"₹320",unit:"/250g",rating:4.8,reviews:301,badge:"AI Pick",icon:"⚗️",org:false},
+];
+
+// ─── APP STATE ──────────────────────────────────────────────────────
+let lang = "en";
+let section = "home";
+let cart = [];
+let activeCat = "All";
+let chatMessages = [];
+let chatLoading = false;
+let cropImg = null, cropImgB64 = null, cropMime = "image/jpeg";
+let cropLoading = false, cropResult = null;
+let soilForm = {type:"Loam",ph:"6.5",moisture:"45",crop:""};
+let soilLoading = false, soilResult = "";
+let voiceState = "idle"; // idle|listening|processing|done
+let voiceRecognition = null;
+let weatherChartT = null, weatherChartR = null, dashChartH = null, dashChartP = null;
+
+// ─── CALL AI ────────────────────────────────────────────────────────
+async function callAI(messages, system="") {
+  const res = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      model:"claude-sonnet-4-20250514",
+      max_tokens:1000,
+      system:system||"You are KhedutAI, an expert agricultural AI assistant for Indian farmers. Be practical, warm, and concise. Always structure your response clearly.",
+      messages
+    })
+  });
+  const data = await res.json();
+  return data.content?.map(b=>b.text||"").join("")||"";
+}
+
+async function analyzeImageAI(base64, mimeType, lang) {
+  const langNote = lang==="hi"?"Respond in Hindi.":lang==="gu"?"Respond in Gujarati.":"Respond in English.";
+  const prompt = `${langNote}\nAnalyze this crop image as an agricultural AI expert. Provide a structured analysis with these exact fields:\n\nCROP DETECTED: [crop name]\nHEALTH STATUS: [Healthy / Mild Issue / Moderate Disease / Severe Disease]\nDISEASE FOUND: [specific disease name or None]\nCONFIDENCE: [percentage]\nPEST DETECTION: [pest name or None detected]\nNUTRITION DEFICIENCY: [deficiency or None]\nWATER REQUIREMENT: [recommendation]\nRECOMMENDED FERTILIZER: [specific fertilizer with dosage]\nSUGGESTED PESTICIDE: [specific product or None needed]\nTREATMENT STEPS: [numbered steps, comma separated]\nHARVEST READINESS: [Ready to harvest / Not ready - X weeks remaining / Recently harvested]\n\nBe specific and practical for Indian farmers.`;
+  const res = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      model:"claude-sonnet-4-20250514",
+      max_tokens:1000,
+      messages:[{role:"user",content:[
+        {type:"image",source:{type:"base64",media_type:mimeType,data:base64}},
+        {type:"text",text:prompt}
+      ]}]
+    })
+  });
+  const data = await res.json();
+  return data.content?.map(b=>b.text||"").join("")||"";
+}
+
+function parseCropResult(text) {
+  const get = (key) => {
+    const m = text.match(new RegExp(key+':\\s*(.+)','i'));
+    return m ? m[1].trim() : "—";
+  };
+  return {
+    crop:get("CROP DETECTED"),health:get("HEALTH STATUS"),disease:get("DISEASE FOUND"),
+    confidence:get("CONFIDENCE"),pest:get("PEST DETECTION"),nutrition:get("NUTRITION DEFICIENCY"),
+    water:get("WATER REQUIREMENT"),fertilizer:get("RECOMMENDED FERTILIZER"),
+    pesticide:get("SUGGESTED PESTICIDE"),treatment:get("TREATMENT STEPS"),harvest:get("HARVEST READINESS"),
+  };
+}
+
+function healthColor(status="") {
+  if(/healthy/i.test(status)) return{bg:"#d8f3dc",col:"#1a5c38",dot:"#52b788"};
+  if(/mild/i.test(status)) return{bg:"#fef3c7",col:"#92400e",dot:"#f59e0b"};
+  if(/moderate/i.test(status)) return{bg:"#fee2e2",col:"#991b1b",dot:"#ef4444"};
+  if(/severe/i.test(status)) return{bg:"#fee2e2",col:"#991b1b",dot:"#dc2626"};
+  return{bg:"#e0e7ff",col:"#3730a3",dot:"#6366f1"};
+}
+
+// ─── NAVIGATE ───────────────────────────────────────────────────────
+function navigate(sec) {
+  section = sec;
+  renderApp();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+// ─── SET LANG ───────────────────────────────────────────────────────
+function setLang(l) {
+  lang = l;
+  renderApp();
+}
+
+// ─── RENDER ─────────────────────────────────────────────────────────
+function renderApp() {
+  const t = T[lang];
+  renderNavbar(t);
+  renderMainSection(t);
+  renderFooter(t);
+  updateChatPlaceholder(t);
+}
+
+function renderNavbar(t) {
+  document.getElementById("nav-brand").textContent = t.brand;
+  document.getElementById("nav-brand-sub").textContent = t.brandSub;
+  const keys = ["home","feats","crops","soil","weather","market","dash"];
+  const links = document.getElementById("nav-links");
+  links.innerHTML = t.nav.map((item,i)=>`
+    <button onclick="navigate('${keys[i]}')" class="${section===keys[i]?'active':''}">${item}</button>
+  `).join("");
+}
+
+function renderFooter(t) {
+  const keys = ["home","feats","crops","soil","weather","market","dash"];
+  document.getElementById("footer-grid").innerHTML = `
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#52b788,#2d8653);display:flex;align-items:center;justify-content:center;font-size:22px">🌾</div>
+        <span style="font-size:22px;font-weight:800;color:#fff">${t.brand}</span>
+      </div>
+      <p style="font-size:14px;color:rgba(255,255,255,.6);line-height:1.8;max-width:320px">${t.footer}</p>
+      <div class="footer-social">
+        ${["🌾","📱","🌐"].map(ic=>`<div class="social-btn">${ic}</div>`).join("")}
+      </div>
+    </div>
+    <div>
+      <h4 style="color:#95d5b2;font-weight:700;margin-bottom:14px;font-size:14px;letter-spacing:.05em">NAVIGATION</h4>
+      ${t.nav.map((item,i)=>`<div class="footer-nav-item" onclick="navigate('${keys[i]}')">${item}</div>`).join("")}
+    </div>
+    <div>
+      <h4 style="color:#95d5b2;font-weight:700;margin-bottom:14px;font-size:14px;letter-spacing:.05em">LANGUAGES</h4>
+      ${[["🇮🇳","English"],["🇮🇳","हिंदी"],["🇮🇳","ગુજરાતી"]].map(([fl,nm])=>`
+        <div style="color:rgba(255,255,255,.6);font-size:14px;margin-bottom:8px;display:flex;gap:8px"><span>${fl}</span>${nm}</div>
+      `).join("")}
+    </div>
+  `;
+  document.getElementById("footer-copy").textContent = t.copy;
+}
+
+function renderMainSection(t) {
+  const mc = document.getElementById("main-content");
+  if (section === "home") {
+    mc.innerHTML = renderHero(t) + renderFeats(t);
+  } else if (section === "feats") {
+    mc.innerHTML = renderFeats(t);
+  } else if (section === "crops") {
+    mc.innerHTML = renderCrops(t);
+    setupCropListeners();
+  } else if (section === "soil") {
+    mc.innerHTML = renderSoil(t);
+    setupSoilListeners();
+  } else if (section === "weather") {
+    mc.innerHTML = renderWeather(t);
+    setTimeout(()=>renderWeatherCharts(),50);
+  } else if (section === "market") {
+    mc.innerHTML = renderMarket(t);
+  } else if (section === "dash") {
+    mc.innerHTML = renderDash(t);
+    setTimeout(()=>renderDashCharts(),50);
+  }
+  // Voice modal text
+  document.getElementById("voice-head").textContent = t.voiceHead;
+  document.getElementById("voice-sub").textContent = t.voiceSub;
+  document.getElementById("voice-status").textContent = t.voiceTap;
+}
+
+// ─── HERO ───────────────────────────────────────────────────────────
+function renderHero(t) {
+  const particles = Array.from({length:12},(_,i)=>({
+    icon:["🌾","🌱","🍃","🌿","☘️","🌻","🌽","🍅"][i%8],
+    x:Math.random()*90+5, delay:Math.random()*4, dur:3+Math.random()*2,
+    size:16+Math.random()*16, top:Math.random()*80+10
+  }));
+  return `
+  <section id="hero">
+    <div class="hero-bg">
+      <div class="hero-orb1"></div>
+      <div class="hero-orb2"></div>
+      <div class="hero-grid"></div>
+      ${particles.map(p=>`<div class="hero-particle" style="font-size:${p.size}px;left:${p.x}%;top:${p.top}%;animation-duration:${p.dur}s;animation-delay:${p.delay}s">${p.icon}</div>`).join("")}
+    </div>
+    <div class="hero-content">
+      <div class="hero-badge pop">
+        <span class="dot"></span>AI-Powered · Available in 3 Languages · Free for Farmers
+      </div>
+      <h1 class="hero-h1 su">${t.tagline}</h1>
+      <h1 class="hero-h2 su" style="animation-delay:.1s">${t.tagline2}</h1>
+      <p class="hero-desc su" style="animation-delay:.2s">${t.heroDesc}</p>
+      <div class="hero-btns su" style="animation-delay:.3s">
+        <button class="hero-btn1 ripple-btn" onclick="navigate('crops')">${t.btn1}</button>
+        <button class="hero-btn2 ripple-btn" onclick="navigate('crops')">${t.btn2}</button>
+        <button class="hero-btn3" onclick="openVoice()">${t.btn3}</button>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="inner" id="stats-bar">
+        ${t.statsLabel.map((lbl,i)=>`
+          <div style="text-align:center">
+            <div class="stat-val" id="stat-${i}">0</div>
+            <div class="stat-label">${lbl}</div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  </section>`;
+}
+
+function animateStats() {
+  const t = T[lang];
+  const targets = [2400000,180000,95000,96.8];
+  const duration = 2000, steps = 60;
+  let step = 0;
+  const timer = setInterval(()=>{
+    step++;
+    const pct = step/steps;
+    const ease = 1-Math.pow(1-pct,3);
+    targets.forEach((target,i)=>{
+      const el = document.getElementById(`stat-${i}`);
+      if (!el) return;
+      const v = i===3 ? (target*ease).toFixed(1)+"%" :
+                i===0 ? fmtNum(Math.round(target*ease)) :
+                fmtNum(Math.round(target*ease));
+      el.textContent = v;
+    });
+    if (step >= steps) clearInterval(timer);
+  }, duration/steps);
+}
+
+function fmtNum(n) {
+  if(n>=1000000) return (n/1000000).toFixed(1)+"M+";
+  if(n>=1000) return (n/1000).toFixed(0)+"K+";
+  return n+"";
+}
+
+// ─── FEATURES ───────────────────────────────────────────────────────
+function renderFeats(t) {
+  const sectionKeys=["crops","crops","weather","home","dash","market"];
+  const colors=["#52b788","#2d8653","#95d5b2","#f59e0b","#52b788","#d97706"];
+  return `
+  <section id="feats-section" style="padding:80px 20px;background:#f4fbf7">
+    <div style="max-width:1100px;margin:0 auto">
+      <div class="section-head">
+        <div class="tag tag-green" style="margin-bottom:12px;font-size:13px">🚀 AI Features</div>
+        <h2>${t.featHead}</h2>
+        <p style="font-size:17px">${t.featSub}</p>
+      </div>
+      <div class="feats-grid">
+        ${t.feats.map((f,i)=>`
+          <div class="card hover-lift feat-card" onclick="navigate('${sectionKeys[i]}')" style="border-left:4px solid ${colors[i]}">
+            <div style="font-size:40px;margin-bottom:14px">${f.icon}</div>
+            <h3>${f.t}</h3>
+            <p>${f.d}</p>
+            <div class="feat-more">Learn more <span>→</span></div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  </section>`;
+}
+
+// ─── CROP DETECTION ─────────────────────────────────────────────────
+function renderCrops(t) {
+  return `
+  <section id="crops-section">
+    <div style="max-width:1100px;margin:0 auto">
+      <div class="section-head">
+        <div class="tag tag-green" style="margin-bottom:12px">🔬 AI Analysis</div>
+        <h2>${t.cropHead}</h2>
+        <p>${t.cropSub}</p>
+      </div>
+      <div class="crop-grid ${cropResult?'has-result':''}" id="crop-grid">
+        <div>
+          <div class="dropzone ${cropImg?'':'empty'}" id="crop-dropzone" onclick="document.getElementById('crop-file').click()">
+            ${cropImg
+              ? `<img src="${cropImg}" alt="crop"/>`
+              : `<div style="font-size:56px;margin-bottom:12px">🌿</div><p style="font-size:16px;font-weight:600;color:var(--g2)">${t.dropzone}</p><p style="font-size:13px;color:var(--tl);margin-top:6px">${t.dropSub}</p>`
+            }
+          </div>
+          <input id="crop-file" type="file" accept="image/*" style="display:none"/>
+          <div class="upload-btns">
+            <button class="btn-upload" onclick="document.getElementById('crop-file').click()">📁 Upload</button>
+            <button class="btn-camera" onclick="captureCamera()">📸 Camera</button>
+          </div>
+          <div id="crop-error" style="display:none" class="err-box"></div>
+          <button id="crop-analyze-btn" class="btn-analyze" onclick="analyzeCrop()" ${!cropImg||cropLoading?'disabled':''}>
+            ${cropLoading
+              ? `<span style="display:flex;align-items:center;justify-content:center;gap:10px"><span class="spinner"></span>${t.analyzing}</span>`
+              : t.analyzeBtn
+            }
+          </button>
+        </div>
+        ${cropResult ? renderCropResult(t) : ''}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderCropResult(t) {
+  const hc = healthColor(cropResult.health);
+  const pairs = [
+    [t.rLabels[0],cropResult.crop],[t.rLabels[2],cropResult.disease],
+    [t.rLabels[3],cropResult.confidence],[t.rLabels[4],cropResult.pest],
+    [t.rLabels[5],cropResult.nutrition],[t.rLabels[6],cropResult.water],
+    [t.rLabels[7],cropResult.fertilizer],[t.rLabels[8],cropResult.pesticide],
+    [t.rLabels[9],cropResult.treatment],[t.rLabels[10],cropResult.harvest],
+  ];
+  return `
+  <div class="fi">
+    <div class="health-banner" style="background:${hc.bg}">
+      <div class="health-dot" style="background:${hc.dot};box-shadow:0 0 0 4px ${hc.bg}"></div>
+      <div>
+        <div style="font-size:13px;color:${hc.col};font-weight:600;opacity:.7">${t.rLabels[1]}</div>
+        <div style="font-size:18px;font-weight:800;color:${hc.col}">${cropResult.health}</div>
+      </div>
+    </div>
+    <div>
+      ${pairs.map(([label,val])=>`
+        <div class="result-row" style="display:flex;gap:12px;align-items:flex-start;background:#f8fdf9;border:1px solid #c8e6d4;border-radius:10px;padding:12px 16px;margin-bottom:8px">
+          <div class="result-label">${label}</div>
+          <div class="result-val">${val}</div>
+        </div>
+      `).join("")}
+    </div>
+  </div>`;
+}
+
+function setupCropListeners() {
+  const dz = document.getElementById("crop-dropzone");
+  const fi = document.getElementById("crop-file");
+  if (!dz || !fi) return;
+  dz.addEventListener("dragover",e=>{e.preventDefault();dz.classList.add("drag-over")});
+  dz.addEventListener("dragleave",()=>dz.classList.remove("drag-over"));
+  dz.addEventListener("drop",e=>{e.preventDefault();dz.classList.remove("drag-over");loadCropFile(e.dataTransfer.files[0])});
+  fi.addEventListener("change",e=>loadCropFile(e.target.files[0]));
+}
+
+function loadCropFile(file) {
+  if (!file) return;
+  if (file.size > 10*1024*1024) { showCropError("File too large. Max 10MB."); return; }
+  cropMime = file.type || "image/jpeg";
+  const reader = new FileReader();
+  reader.onload = e => {
+    cropImg = e.target.result;
+    cropImgB64 = e.target.result.split(",")[1];
+    cropResult = null;
+    hideCropError();
+    renderMainSection(T[lang]);
+  };
+  reader.readAsDataURL(file);
+}
+
+function showCropError(msg) {
+  const el = document.getElementById("crop-error");
+  if (el) { el.textContent = msg; el.style.display = "block"; }
+}
+function hideCropError() {
+  const el = document.getElementById("crop-error");
+  if (el) el.style.display = "none";
+}
+
+async function analyzeCrop() {
+  if (!cropImgB64 || cropLoading) return;
+  cropLoading = true; cropResult = null;
+  renderMainSection(T[lang]);
+  try {
+    const raw = await analyzeImageAI(cropImgB64, cropMime, lang);
+    cropResult = parseCropResult(raw);
+  } catch(e) {
+    showCropError("AI analysis failed. Please try again.");
+  }
+  cropLoading = false;
+  renderMainSection(T[lang]);
+}
+
+async function captureCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video:true});
+    const video = document.createElement("video");
+    video.srcObject = stream; video.play();
+    await new Promise(r=>video.onloadedmetadata=r);
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video,0,0);
+    stream.getTracks().forEach(t=>t.stop());
+    const dataUrl = canvas.toDataURL("image/jpeg");
+    cropImg = dataUrl; cropImgB64 = dataUrl.split(",")[1];
+    cropMime = "image/jpeg"; cropResult = null;
+    renderMainSection(T[lang]);
+  } catch(e) { showCropError("Camera access denied. Please allow camera permissions."); }
+}
+
+// ─── SOIL ANALYSIS ──────────────────────────────────────────────────
+function renderSoil(t) {
+  return `
+  <section id="soil-section">
+    <div style="max-width:1000px;margin:0 auto">
+      <div class="section-head">
+        <div class="tag tag-amber" style="margin-bottom:12px">🧪 Soil AI</div>
+        <h2>${t.soilHead}</h2>
+        <p>${t.soilSub}</p>
+      </div>
+      <div class="soil-grid ${soilResult?'has-result':''}" id="soil-grid">
+        <div class="card" style="padding:32px">
+          <div style="margin-bottom:20px">
+            <label style="display:block;font-size:14px;font-weight:600;color:var(--g2);margin-bottom:6px">${t.sf1}</label>
+            <select id="soil-type" onchange="soilForm.type=this.value">
+              ${t.soilTypes.map(s=>`<option ${soilForm.type===s?'selected':''}>${s}</option>`).join("")}
+            </select>
+          </div>
+          <div style="margin-bottom:20px">
+            <label style="display:block;font-size:14px;font-weight:600;color:var(--g2);margin-bottom:6px">${t.sf2}</label>
+            <input type="number" id="soil-ph" min="0" max="14" step="0.1" value="${soilForm.ph}" oninput="soilForm.ph=this.value" placeholder="6.5"/>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tl);margin-top:4px">
+              <span>0 Acidic</span><span style="color:#2d8653;font-weight:600">6–7 Ideal</span><span>14 Alkaline</span>
+            </div>
+          </div>
+          <div style="margin-bottom:20px">
+            <label style="display:block;font-size:14px;font-weight:600;color:var(--g2);margin-bottom:6px">${t.sf3}</label>
+            <input type="number" id="soil-moisture" min="0" max="100" value="${soilForm.moisture}" oninput="soilForm.moisture=this.value" placeholder="45"/>
+          </div>
+          <div style="margin-bottom:24px">
+            <label style="display:block;font-size:14px;font-weight:600;color:var(--g2);margin-bottom:6px">${t.sf4}</label>
+            <input type="text" id="soil-crop" value="${soilForm.crop}" oninput="soilForm.crop=this.value" placeholder="e.g. Cotton, Wheat, Rice..."/>
+          </div>
+          <div id="soil-error" style="display:none" class="err-box"></div>
+          <button id="soil-btn" class="btn-soil" onclick="analyzeSoil()" ${soilLoading?'disabled':''}>
+            ${soilLoading
+              ? `<span style="display:flex;align-items:center;justify-content:center;gap:10px"><span class="spinner"></span>Analyzing soil...</span>`
+              : t.soilBtn
+            }
+          </button>
+        </div>
+        ${soilResult ? `
+          <div class="card fi soil-result">
+            <h3 style="font-size:18px;font-weight:700;color:var(--g1);margin-bottom:16px">🌱 AI Soil Analysis — <span style="color:var(--g3)">${soilForm.crop}</span></h3>
+            <div>${formatSoilResult(soilResult)}</div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  </section>`;
+}
+
+function formatSoilResult(text) {
+  return text.split('\n').map(line=>{
+    if (/^\d+\./.test(line)) return `<div class="soil-result-line heading">${line}</div>`;
+    if (line.startsWith("-")) return `<div class="soil-result-line bullet">${line}</div>`;
+    return `<div class="soil-result-line">${line}</div>`;
+  }).join("");
+}
+
+function setupSoilListeners() {
+  // inputs already use oninput
+}
+
+async function analyzeSoil() {
+  soilForm.crop = document.getElementById("soil-crop")?.value || soilForm.crop;
+  soilForm.ph = document.getElementById("soil-ph")?.value || soilForm.ph;
+  soilForm.moisture = document.getElementById("soil-moisture")?.value || soilForm.moisture;
+  soilForm.type = document.getElementById("soil-type")?.value || soilForm.type;
+  if (!soilForm.crop) {
+    const el = document.getElementById("soil-error");
+    if (el) { el.textContent = "Please enter a crop name."; el.style.display = "block"; }
+    return;
+  }
+  soilLoading = true; soilResult = "";
+  renderMainSection(T[lang]);
+  const langNote = lang==="hi"?"Respond in Hindi.":lang==="gu"?"Respond in Gujarati.":"Respond in English.";
+  const prompt = `${langNote}\nYou are a soil science AI expert. Analyze this soil data for an Indian farmer:\n- Soil Type: ${soilForm.type}\n- Soil pH: ${soilForm.ph}\n- Moisture Level: ${soilForm.moisture}%\n- Target Crop: ${soilForm.crop}\n\nProvide structured recommendations covering:\n1. SOIL ASSESSMENT: Overall soil quality assessment\n2. BEST FERTILIZERS: Specific fertilizer recommendations with quantities\n3. WATER SCHEDULE: Irrigation quantity and timing\n4. SUITABLE CROPS: Other crops this soil can support\n5. SOIL IMPROVEMENT: Tips to improve soil quality\n6. ORGANIC OPTIONS: Organic farming alternatives\n\nBe practical and specific for Indian farming conditions.`;
+  try {
+    soilResult = await callAI([{role:"user",content:prompt}]);
+  } catch(e) {
+    const el = document.getElementById("soil-error");
+    if (el) { el.textContent = "Analysis failed. Please try again."; el.style.display = "block"; }
+  }
+  soilLoading = false;
+  renderMainSection(T[lang]);
+}
+
+// ─── WEATHER ────────────────────────────────────────────────────────
+function renderWeather(t) {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+  const weather=[
+    {icon:"🌤️",label:"Temperature",val:"32°C",sub:"Feels like 36°C",bg:"#fef3c7",col:"#92400e"},
+    {icon:"💧",label:"Humidity",val:"68%",sub:"High humidity",bg:"#dbeafe",col:"#1e40af"},
+    {icon:"🌬️",label:"Wind Speed",val:"18 km/h",sub:"Southwest",bg:"#f0fdf4",col:"#166534"},
+    {icon:"🌧️",label:"Rain Chance",val:"35%",sub:"Tomorrow: 60%",bg:"#ede9fe",col:"#4c1d95"},
+  ];
+  const alerts=[
+    {icon:"⚠️",text:"High humidity alert — Risk of fungal diseases. Apply preventive fungicide.",type:"warn"},
+    {icon:"💡",text:"Good conditions for irrigation early morning (5–7 AM) to reduce evaporation.",type:"info"},
+    {icon:"🌾",text:"Optimal harvest window for wheat: Next 3–5 days before expected rain.",type:"good"},
+  ];
+  return `
+  <section id="weather-section">
+    <div style="max-width:1100px;margin:0 auto">
+      <div class="section-head">
+        <div class="tag tag-blue" style="margin-bottom:12px">🌤️ Live Weather</div>
+        <h2>${t.weatherHead}</h2>
+        <p>${dateStr}</p>
+      </div>
+      <div class="weather-cards">
+        ${weather.map(w=>`
+          <div class="card hover-lift weather-card" style="background:${w.bg};border:1px solid ${w.col}22">
+            <div style="font-size:40px;margin-bottom:8px">${w.icon}</div>
+            <div style="font-size:13px;color:${w.col};font-weight:600;opacity:.7;margin-bottom:4px">${w.label}</div>
+            <div style="font-size:28px;font-weight:800;color:${w.col}">${w.val}</div>
+            <div style="font-size:12px;color:${w.col};opacity:.6;margin-top:4px">${w.sub}</div>
+          </div>
+        `).join("")}
+      </div>
+      <div class="weather-charts">
+        <div class="card chart-box"><h3>🌡️ 7-Day Temperature</h3><canvas id="chart-temp" height="180"></canvas></div>
+        <div class="card chart-box"><h3>🌧️ Rain Probability (%)</h3><canvas id="chart-rain" height="180"></canvas></div>
+      </div>
+      <div class="card" style="padding:24px">
+        <h3 style="font-size:16px;font-weight:700;color:var(--g1);margin-bottom:16px">⚡ Farming Alerts</h3>
+        ${alerts.map(a=>`
+          <div class="alert-item" style="background:${a.type==="warn"?"#fef3c7":a.type==="info"?"#dbeafe":"#d8f3dc"};border:1px solid ${a.type==="warn"?"#fcd34d":a.type==="info"?"#93c5fd":"#95d5b2"}">
+            <span style="font-size:18px;flex-shrink:0">${a.icon}</span>
+            <span style="font-size:14px;color:var(--tx);line-height:1.5">${a.text}</span>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderWeatherCharts() {
+  if (weatherChartT) { weatherChartT.destroy(); weatherChartT=null; }
+  if (weatherChartR) { weatherChartR.destroy(); weatherChartR=null; }
+  const tc = document.getElementById("chart-temp");
+  const rc = document.getElementById("chart-rain");
+  if (!tc || !rc) return;
+  const labels = WEATHER_DATA.map(d=>d.day);
+  const commonOpts = {responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y}}},scales:{x:{grid:{display:false},ticks:{color:"#5a8c6e",font:{size:12}}},y:{display:false}}};
+  weatherChartT = new Chart(tc.getContext("2d"),{
+    type:"line",
+    data:{labels,datasets:[{data:WEATHER_DATA.map(d=>d.temp),borderColor:"#2d8653",fill:true,backgroundColor:"rgba(82,183,136,.15)",borderWidth:2.5,pointRadius:3,tension:.4,label:"Temp °C"}]},
+    options:{...commonOpts}
+  });
+  weatherChartR = new Chart(rc.getContext("2d"),{
+    type:"bar",
+    data:{labels,datasets:[{data:WEATHER_DATA.map(d=>d.rain),backgroundColor:"#95d5b2",borderRadius:4,label:"Rain %"}]},
+    options:{...commonOpts}
+  });
+}
+
+// ─── MARKETPLACE ────────────────────────────────────────────────────
+function renderMarket(t) {
+  const cats = ["All","Seeds","Fertilizer","Pesticide","Tools"];
+  const filtered = activeCat==="All" ? MARKET_ITEMS : MARKET_ITEMS.filter(m=>m.cat===activeCat);
+  return `
+  <section id="market-section">
+    <div style="max-width:1100px;margin:0 auto">
+      <div class="market-top">
+        <div>
+          <div class="tag tag-amber" style="margin-bottom:10px">🛒 Marketplace</div>
+          <h2 style="font-size:clamp(26px,4vw,40px);font-weight:800;color:var(--g1)">${t.marketHead}</h2>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="background:#d8f3dc;border-radius:10px;padding:8px 16px;font-size:14px;font-weight:600;color:#1a5c38;display:flex;align-items:center;gap:6px" id="cart-count">🛒 Cart: ${cart.length} items</div>
+        </div>
+      </div>
+      <div class="cat-filters">
+        ${cats.map(c=>`<button class="cat-btn ${activeCat===c?'active':''}" onclick="setCat('${c}')">${c}</button>`).join("")}
+      </div>
+      <div class="market-grid">
+        ${filtered.map(item=>{
+          const badgeBg = item.badge==="Organic"?"#d8f3dc":item.badge==="AI Pick"?"#e0e7ff":"#fef3c7";
+          const badgeCol = item.badge==="Organic"?"#1a5c38":item.badge==="AI Pick"?"#3730a3":"#92400e";
+          return `
+          <div class="card hover-lift market-item">
+            ${item.badge ? `<span class="market-badge" style="background:${badgeBg};color:${badgeCol}">${item.badge}</span>` : ''}
+            <div style="font-size:40px;margin-bottom:12px">${item.icon}</div>
+            <span class="item-cat">${item.cat}</span>
+            <h3 style="font-size:16px;font-weight:700;color:var(--tx);margin-bottom:8px">${item.name}</h3>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+              <span style="color:#f59e0b;font-size:14px">★ ${item.rating}</span>
+              <span style="font-size:12px;color:var(--tl)">(${item.reviews} reviews)</span>
+              ${item.org?`<span class="tag tag-green" style="font-size:11px">🌿 Organic</span>`:''}
+            </div>
+            <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:16px">
+              <span style="font-size:24px;font-weight:800;color:var(--g2)">${item.price}</span>
+              <span style="font-size:13px;color:var(--tl)">${item.unit}</span>
+            </div>
+            <div class="item-btns">
+              <button class="btn-cart" onclick="addToCart(${item.id})">+ Cart</button>
+              <button class="btn-buy">${t.buyNow}</button>
+            </div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>
+  </section>`;
+}
+
+function setCat(c) {
+  activeCat = c;
+  renderMainSection(T[lang]);
+}
+
+function addToCart(id) {
+  const item = MARKET_ITEMS.find(m=>m.id===id);
+  if (item) { cart.push(item); }
+  const el = document.getElementById("cart-count");
+  if (el) el.textContent = `🛒 Cart: ${cart.length} items`;
+}
+
+// ─── DASHBOARD ──────────────────────────────────────────────────────
+function renderDash(t) {
+  const kpis=[
+    {icon:"🌿",label:"Healthy Crops",val:"68%",trend:"+4%",up:true,bg:"#d8f3dc",col:"#1a5c38"},
+    {icon:"🦠",label:"Disease Alerts",val:"12%",trend:"-3%",up:false,bg:"#fee2e2",col:"#991b1b"},
+    {icon:"💧",label:"Water Used",val:"1,240 L",trend:"-8%",up:false,bg:"#dbeafe",col:"#1e40af"},
+    {icon:"🌾",label:"Harvest Ready",val:"3 crops",trend:"On time",up:true,bg:"#fef3c7",col:"#92400e"},
+  ];
+  const recos=[
+    {icon:"💊",title:"Apply DAP fertilizer",desc:"To Plot B wheat — nitrogen deficiency detected in last scan",priority:"High"},
+    {icon:"💧",title:"Reduce irrigation",desc:"Soil moisture at 78% — skip tomorrow's watering to prevent root rot",priority:"Medium"},
+    {icon:"🌿",title:"Harvest cotton by Friday",desc:"Weather window favorable before predicted rains Saturday–Sunday",priority:"High"},
+  ];
+  return `
+  <section id="dash-section">
+    <div style="max-width:1100px;margin:0 auto">
+      <div class="section-head">
+        <div class="tag tag-green" style="margin-bottom:12px">📊 Analytics</div>
+        <h2>${t.dashHead}</h2>
+      </div>
+      <div class="kpi-grid">
+        ${kpis.map(k=>`
+          <div class="card hover-lift kpi-card" style="background:${k.bg};border:1px solid ${k.col}22">
+            <div style="font-size:32px;margin-bottom:8px">${k.icon}</div>
+            <div style="font-size:12px;color:${k.col};font-weight:600;opacity:.7;margin-bottom:4px">${k.label}</div>
+            <div style="font-size:28px;font-weight:800;color:${k.col}">${k.val}</div>
+            <div style="font-size:12px;color:${k.up?"#16a34a":"#dc2626"};font-weight:600;margin-top:4px">${k.trend}</div>
+          </div>
+        `).join("")}
+      </div>
+      <div class="dash-charts">
+        <div class="card chart-box"><h3>📈 Harvest Yield (quintals)</h3><canvas id="chart-harvest" height="220"></canvas></div>
+        <div class="card chart-box">
+          <h3>🌱 Crop Health</h3>
+          <canvas id="chart-health" height="180"></canvas>
+          <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:12px">
+            ${HEALTH_DATA.map((d,i)=>`
+              <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--tl)">
+                <span style="width:10px;height:10px;border-radius:50%;background:${PIE_COLORS[i]};display:inline-block"></span>
+                ${d.name} (${d.value}%)
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      </div>
+      <div class="card" style="padding:24px">
+        <h3 style="font-size:16px;font-weight:700;color:var(--g1);margin-bottom:16px">🤖 AI Recommendations</h3>
+        <div class="reco-grid">
+          ${recos.map(r=>`
+            <div class="reco-item">
+              <div class="reco-head">
+                <span style="font-size:22px">${r.icon}</span>
+                <span class="${r.priority==="High"?"tag tag-red":"tag tag-amber"}">${r.priority}</span>
+              </div>
+              <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px">${r.title}</div>
+              <div style="font-size:12px;color:var(--tl);line-height:1.5">${r.desc}</div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderDashCharts() {
+  if (dashChartH) { dashChartH.destroy(); dashChartH=null; }
+  if (dashChartP) { dashChartP.destroy(); dashChartP=null; }
+  const hc = document.getElementById("chart-harvest");
+  const pc = document.getElementById("chart-health");
+  if (!hc || !pc) return;
+  dashChartH = new Chart(hc.getContext("2d"),{
+    type:"bar",
+    data:{
+      labels:HARVEST_DATA.map(d=>d.month),
+      datasets:[{data:HARVEST_DATA.map(d=>d.yield),backgroundColor:"rgba(45,134,83,.85)",borderRadius:6,label:"Yield (q)"}]
+    },
+    options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+" q"}}},scales:{x:{grid:{display:false},ticks:{color:"#5a8c6e",font:{size:12}}},y:{ticks:{color:"#5a8c6e",font:{size:12}},grid:{color:"#e8f5ee"}}}}
+  });
+  dashChartP = new Chart(pc.getContext("2d"),{
+    type:"doughnut",
+    data:{labels:HEALTH_DATA.map(d=>d.name),datasets:[{data:HEALTH_DATA.map(d=>d.value),backgroundColor:PIE_COLORS,borderWidth:0}]},
+    options:{responsive:true,cutout:"60%",plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed}%`}}}}
+  });
+}
+
+// ─── CHAT ───────────────────────────────────────────────────────────
+function initChat() {
+  chatMessages = [{role:"assistant",content:"🌾 Namaste! I'm your KhedutAI assistant. Ask me anything about crops, diseases, fertilizers, or farming practices!"}];
+  renderChatMessages();
+  document.getElementById("chat-input").addEventListener("input", function(){
+    document.getElementById("chat-send").disabled = !this.value.trim() || chatLoading;
+  });
+}
+
+function toggleChat() {
+  const cw = document.getElementById("chat-window");
+  const fab = document.getElementById("chat-fab-btn");
+  if (cw.classList.contains("open")) {
+    cw.classList.remove("open");
+    fab.style.display = "flex";
+  } else {
+    cw.classList.add("open");
+    fab.style.display = "none";
+    renderChatMessages();
+  }
+}
+
+function renderChatMessages() {
+  const el = document.getElementById("chat-messages");
+  if (!el) return;
+  el.innerHTML = chatMessages.map(m=>`
+    <div class="chat-msg ${m.role}">
+      <div class="chat-bubble ${m.role}">${m.content.replace(/\n/g,"<br>")}</div>
+    </div>
+  `).join("");
+  if (chatLoading) {
+    el.innerHTML += `<div class="typing-dots">${[0,1,2].map(i=>`<span class="typing-dot" style="animation-delay:${i*.2}s"></span>`).join("")}</div>`;
+  }
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendChat() {
+  const input = document.getElementById("chat-input");
+  const q = input.value.trim();
+  if (!q || chatLoading) return;
+  const langNote = lang==="hi"?"Please respond in Hindi.":lang==="gu"?"Please respond in Gujarati.":"Please respond in English.";
+  input.value = "";
+  document.getElementById("chat-send").disabled = true;
+  chatMessages.push({role:"user",content:q});
+  chatLoading = true;
+  renderChatMessages();
+  try {
+    const history = chatMessages.slice(-10).map(m=>({role:m.role,content:m.content}));
+    history[history.length-1].content = `${langNote} ${q}`;
+    const res = await callAI(history,"You are KhedutAI, a friendly and knowledgeable AI assistant for Indian farmers. Provide practical, actionable advice. Be warm and encouraging. Keep responses concise but helpful.");
+    chatMessages.push({role:"assistant",content:res});
+  } catch(e) {
+    chatMessages.push({role:"assistant",content:"Sorry, I had trouble connecting. Please try again!"});
+  }
+  chatLoading = false;
+  renderChatMessages();
+}
+
+function updateChatPlaceholder(t) {
+  const el = document.getElementById("chat-input");
+  if (el) el.placeholder = t.chatPH || "Ask about crops, diseases...";
+}
+
+// ─── VOICE MODAL ─────────────────────────────────────────────────────
+function openVoice() {
+  document.getElementById("voice-modal").classList.add("open");
+  resetVoice();
+}
+function closeVoice() {
+  stopVoice();
+  document.getElementById("voice-modal").classList.remove("open");
+}
+
+function resetVoice() {
+  const t = T[lang];
+  voiceState = "idle";
+  setVoiceMicStyle("idle");
+  document.getElementById("voice-status").textContent = t.voiceTap;
+  document.getElementById("voice-transcript").style.display = "none";
+  document.getElementById("voice-response").style.display = "none";
+  document.getElementById("voice-stop").style.display = "none";
+}
+
+function setVoiceMicStyle(state) {
+  const mic = document.getElementById("voice-mic");
+  const wrap = document.getElementById("voice-mic-wrap");
+  // Remove ripples
+  wrap.querySelectorAll(".ripple-ring").forEach(r=>r.remove());
+  if (state==="idle") {
+    mic.style.background = "linear-gradient(135deg,#1a5c38,#52b788)";
+    mic.style.boxShadow = "0 8px 32px rgba(26,92,56,.4)";
+    mic.style.animation = "";
+    mic.textContent = "🎤";
+  } else if (state==="listening") {
+    mic.style.background = "linear-gradient(135deg,#dc2626,#ef4444)";
+    mic.style.boxShadow = "0 8px 32px rgba(220,38,38,.4)";
+    mic.style.animation = "";
+    mic.textContent = "⏹️";
+    // Add ripples
+    ["-12px","rgba(45,134,83,.15)",0],["-24px","rgba(45,134,83,.08)",.5].forEach(([inset,bg,delay])=>{
+      const r = document.createElement("div");
+      r.className = "ripple-ring";
+      r.style.cssText = `inset:${inset};background:${bg};animation:ripple 1.5s ease-out infinite ${delay}s`;
+      wrap.insertBefore(r, mic);
+    });
+  } else if (state==="processing") {
+    mic.style.background = "linear-gradient(135deg,#b45309,#f59e0b)";
+    mic.style.boxShadow = "0 8px 32px rgba(245,158,11,.4)";
+    mic.style.animation = "pulse 1s ease-in-out infinite";
+    mic.textContent = "⏳";
+  }
+}
+
+async function toggleVoice() {
+  const t = T[lang];
+  if (voiceState === "idle") {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      document.getElementById("voice-transcript-text").textContent = "Speech recognition not supported in this browser.";
+      document.getElementById("voice-transcript").style.display = "block";
+      voiceState = "done";
+      return;
+    }
+    const rec = new SR();
+    rec.lang = lang==="hi"?"hi-IN":lang==="gu"?"gu-IN":"en-IN";
+    rec.continuous = false; rec.interimResults = false;
+    voiceRecognition = rec;
+    voiceState = "listening";
+    setVoiceMicStyle("listening");
+    document.getElementById("voice-status").textContent = t.voiceListen;
+    document.getElementById("voice-stop").style.display = "inline-block";
+    rec.onresult = async e => {
+      const text = e.results[0][0].transcript;
+      document.getElementById("voice-transcript-text").textContent = text;
+      document.getElementById("voice-transcript").style.display = "block";
+      voiceState = "processing";
+      setVoiceMicStyle("processing");
+      document.getElementById("voice-status").textContent = t.voiceProcess;
+      try {
+        const langNote = lang==="hi"?"Reply in Hindi.":lang==="gu"?"Reply in Gujarati.":"Reply in English.";
+        const res = await callAI([{role:"user",content:`${langNote} Farmer's question: ${text}`}]);
+        document.getElementById("voice-response-text").textContent = res;
+        document.getElementById("voice-response").style.display = "block";
+        const utt = new SpeechSynthesisUtterance(res);
+        utt.lang = lang==="hi"?"hi-IN":lang==="gu"?"gu-IN":"en-IN";
+        window.speechSynthesis.speak(utt);
+        voiceState = "done";
+        setVoiceMicStyle("idle");
+        document.getElementById("voice-status").textContent = "✅ Response ready";
+        document.getElementById("voice-stop").style.display = "none";
+      } catch(e) {
+        document.getElementById("voice-response-text").textContent = "Sorry, I couldn't process that. Please try again.";
+        document.getElementById("voice-response").style.display = "block";
+        voiceState = "done";
+        setVoiceMicStyle("idle");
+        document.getElementById("voice-stop").style.display = "none";
+      }
+    };
+    rec.onerror = ()=>{ voiceState="idle"; setVoiceMicStyle("idle"); document.getElementById("voice-status").textContent=t.voiceTap; };
+    rec.start();
+  } else {
+    stopVoice();
+  }
+}
+
+function stopVoice() {
+  if (voiceRecognition) { try{voiceRecognition.stop();}catch(e){} voiceRecognition=null; }
+  window.speechSynthesis.cancel();
+  resetVoice();
+}
+
+// ─── BOOT ───────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded",()=>{
+  renderApp();
+  initChat();
+  // Animate stats after hero renders
+  setTimeout(animateStats, 100);
+});
+
+// Re-animate stats when going home
+const origNavigate = navigate;
+window.navigate = function(sec) {
+  section = sec;
+  renderApp();
+  window.scrollTo({top:0,behavior:"smooth"});
+  if (sec === "home") setTimeout(animateStats,150);
+};
+</script>
+</body>
+</html>

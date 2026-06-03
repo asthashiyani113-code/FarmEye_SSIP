@@ -458,6 +458,125 @@ const MARKET_ITEMS=[
 ];
 
 // ─── APP STATE ──────────────────────────────────────────────────────
+
+// ─── DJANGO API HELPERS ──────────────────────────────────────────────
+const API_BASE = "/api";
+
+async function apiGet(path) {
+  const res = await fetch(API_BASE + path);
+  if (!res.ok) throw new Error("API error: " + res.status);
+  return res.json();
+}
+
+// ─── DB STATE ───────────────────────────────────────────────────────
+let dbStates = [];
+let dbCities = [];
+let dbCrops = [];
+let dbSelectedState = "";
+let dbSelectedCity = "";
+let dbWeatherData = null;
+let dbSoilData = null;
+let dbHealthData = null;
+let dbDashData = null;
+let dbLoading = false;
+
+async function loadStates() {
+  try {
+    dbStates = await apiGet("/states/");
+    if (dbStates.length > 0 && !dbSelectedState) {
+      dbSelectedState = dbStates[0];
+      await loadCitiesAndCrops(dbSelectedState);
+    }
+  } catch(e) {
+    console.warn("Could not load states from API:", e);
+  }
+}
+
+async function loadCitiesAndCrops(state) {
+  try {
+    [dbCities, dbCrops] = await Promise.all([
+      apiGet("/cities/?state=" + encodeURIComponent(state)),
+      apiGet("/crops/?state=" + encodeURIComponent(state))
+    ]);
+    if (dbCities.length > 0) {
+      dbSelectedCity = dbCities[0];
+      await loadCityData(dbSelectedCity);
+    }
+  } catch(e) {
+    console.warn("Could not load cities/crops:", e);
+  }
+}
+
+async function loadCityData(city) {
+  try {
+    [dbWeatherData, dbSoilData, dbHealthData, dbDashData] = await Promise.all([
+      apiGet("/weather/?city=" + encodeURIComponent(city)),
+      apiGet("/soil/?city=" + encodeURIComponent(city)),
+      apiGet("/health/?city=" + encodeURIComponent(city)),
+      apiGet("/dashboard/?city=" + encodeURIComponent(city))
+    ]);
+  } catch(e) {
+    console.warn("Could not load city data:", e);
+  }
+}
+
+async function onStateChange(state) {
+  dbSelectedState = state;
+  dbSelectedCity = "";
+  dbCities = [];
+  dbCrops = [];
+  dbWeatherData = null; dbSoilData = null; dbHealthData = null; dbDashData = null;
+  dbLoading = true;
+  renderMainSection(T[lang]);
+  await loadCitiesAndCrops(state);
+  dbLoading = false;
+  renderMainSection(T[lang]);
+}
+
+async function onCityChange(city) {
+  dbSelectedCity = city;
+  dbWeatherData = null; dbSoilData = null; dbHealthData = null; dbDashData = null;
+  dbLoading = true;
+  renderMainSection(T[lang]);
+  await loadCityData(city);
+  dbLoading = false;
+  renderMainSection(T[lang]);
+}
+
+// Selector HTML helper used across sections
+function renderLocationSelectors(showCrop) {
+  return `
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:28px;align-items:flex-end">
+      <div style="flex:1;min-width:160px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--g2);margin-bottom:5px">📍 State</label>
+        <select onchange="onStateChange(this.value)" style="width:100%">
+          ${dbStates.length ? dbStates.map(s=>`<option ${s===dbSelectedState?'selected':''}>${s}</option>`).join("") : '<option>Loading...</option>'}
+        </select>
+      </div>
+      <div style="flex:1;min-width:160px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--g2);margin-bottom:5px">🏙️ City / District</label>
+        <select onchange="onCityChange(this.value)" style="width:100%">
+          ${dbCities.length ? dbCities.map(c=>`<option ${c===dbSelectedCity?'selected':''}>${c}</option>`).join("") : '<option>Select state first</option>'}
+        </select>
+      </div>
+      ${showCrop && dbCrops.length ? `
+      <div style="flex:1;min-width:160px">
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--g2);margin-bottom:5px">🌾 Available Crops</label>
+        <select style="width:100%">
+          ${dbCrops.map(c=>`<option>${c}</option>`).join("")}
+        </select>
+      </div>` : ''}
+    </div>`;
+}
+
+function dbLoadingSpinner(msg) {
+  return `<div style="text-align:center;padding:40px 20px">
+    <span style="font-size:40px">🔄</span>
+    <p style="margin-top:12px;font-size:15px;color:var(--tl);font-weight:600">${msg||'Loading data...'}</p>
+  </div>`;
+}
+
+// ─── APP STATE ──────────────────────────────────────────────────────
 let lang = "en";
 let section = "home";
 let cart = [];
@@ -601,12 +720,12 @@ function renderMainSection(t) {
     setupSoilListeners();
   } else if (section === "weather") {
     mc.innerHTML = renderWeather(t);
-    setTimeout(()=>renderWeatherCharts(),50);
+    if (!dbLoading) setTimeout(()=>renderWeatherCharts(),50);
   } else if (section === "market") {
     mc.innerHTML = renderMarket(t);
   } else if (section === "dash") {
     mc.innerHTML = renderDash(t);
-    setTimeout(()=>renderDashCharts(),50);
+    if (!dbLoading) setTimeout(()=>renderDashCharts(),50);
   }
   // Voice modal text
   document.getElementById("voice-head").textContent = t.voiceHead;
@@ -710,6 +829,14 @@ function renderFeats(t) {
 
 // ─── CROP DETECTION ─────────────────────────────────────────────────
 function renderCrops(t) {
+  // Build DB info banner if we have city data
+  const dashRow = dbDashData && dbDashData[0];
+  const healthIdx = dbHealthData && dbHealthData[0] ? dbHealthData[0].crop_health_index : null;
+  const healthBadge = healthIdx !== null ? (
+    healthIdx >= 75 ? '<span class="tag tag-green">✅ Healthy (Index: '+healthIdx+')</span>' :
+    healthIdx >= 50 ? '<span class="tag tag-amber">⚠️ At Risk (Index: '+healthIdx+')</span>' :
+    '<span class="tag tag-red">🚨 Diseased (Index: '+healthIdx+')</span>'
+  ) : '';
   return `
   <section id="crops-section">
     <div style="max-width:1100px;margin:0 auto">
@@ -718,6 +845,26 @@ function renderCrops(t) {
         <h2>${t.cropHead}</h2>
         <p>${t.cropSub}</p>
       </div>
+      ${renderLocationSelectors(true)}
+      ${dbLoading ? dbLoadingSpinner('Loading crop data...') : dashRow ? `
+      <div class="card" style="padding:16px 22px;margin-bottom:24px;background:#f4fbf7;display:flex;flex-wrap:wrap;gap:16px;align-items:center;border-left:4px solid #52b788">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:12px;color:var(--tl);font-weight:600;margin-bottom:2px">📍 Selected Location</div>
+          <div style="font-size:16px;font-weight:700;color:var(--g1)">${dashRow.city}, ${dashRow.state}</div>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <div style="font-size:12px;color:var(--tl);font-weight:600;margin-bottom:2px">🌾 Primary Crop</div>
+          <div style="font-size:16px;font-weight:700;color:var(--g2)">${dashRow.crop_type}</div>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <div style="font-size:12px;color:var(--tl);font-weight:600;margin-bottom:2px">❤️ Crop Health</div>
+          <div>${healthBadge || '—'}</div>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <div style="font-size:12px;color:var(--tl);font-weight:600;margin-bottom:2px">🗺️ Region</div>
+          <div style="font-size:15px;font-weight:600;color:var(--tm)">${dashRow.region}</div>
+        </div>
+      </div>` : ''}
       <div class="crop-grid ${cropResult?'has-result':''}" id="crop-grid">
         <div>
           <div class="dropzone ${cropImg?'':'empty'}" id="crop-dropzone" onclick="document.getElementById('crop-file').click()">
@@ -841,6 +988,16 @@ async function captureCamera() {
 
 // ─── SOIL ANALYSIS ──────────────────────────────────────────────────
 function renderSoil(t) {
+  // Pre-fill from DB if available
+  const sd = dbSoilData && dbSoilData[0];
+  const dd = dbDashData && dbDashData[0];
+  if (sd && !soilResult) {
+    if (sd.soil_moisture) soilForm.moisture = sd.soil_moisture.toFixed(1);
+    if (sd.soil_ph) soilForm.ph = sd.soil_ph.toFixed(1);
+  }
+  if (dd && !soilResult && !soilForm.crop) {
+    soilForm.crop = dd.crop_type || "";
+  }
   return `
   <section id="soil-section">
     <div style="max-width:1000px;margin:0 auto">
@@ -849,6 +1006,13 @@ function renderSoil(t) {
         <h2>${t.soilHead}</h2>
         <p>${t.soilSub}</p>
       </div>
+      ${renderLocationSelectors(false)}
+      ${sd ? `<div class="card" style="padding:14px 20px;margin-bottom:20px;background:#fffbeb;border-left:4px solid #f59e0b;display:flex;flex-wrap:wrap;gap:14px">
+        <div><span style="font-size:12px;font-weight:600;color:var(--tl)">📡 DB Soil pH</span><br><strong style="font-size:18px;color:var(--br)">${parseFloat(sd.soil_ph).toFixed(1)}</strong></div>
+        <div><span style="font-size:12px;font-weight:600;color:var(--tl)">💧 DB Moisture</span><br><strong style="font-size:18px;color:#1e40af">${parseFloat(sd.soil_moisture).toFixed(1)}%</strong></div>
+        ${dd ? `<div><span style="font-size:12px;font-weight:600;color:var(--tl)">🌾 DB Crop</span><br><strong style="font-size:18px;color:var(--g2)">${dd.crop_type}</strong></div>` : ''}
+        <div style="font-size:12px;color:var(--tl);align-self:center">← Values auto-filled from database for <strong>${dd ? dd.city : dbSelectedCity}</strong></div>
+      </div>` : (dbLoading ? dbLoadingSpinner('Loading soil data...') : '')}
       <div class="soil-grid ${soilResult?'has-result':''}" id="soil-grid">
         <div class="card" style="padding:32px">
           <div style="margin-bottom:20px">
@@ -931,16 +1095,28 @@ async function analyzeSoil() {
 function renderWeather(t) {
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+  const wd = dbWeatherData && dbWeatherData[0];
+  const dd = dbDashData && dbDashData[0];
+  // Use DB data if available, else fall back to static defaults
+  const tempVal = wd ? parseFloat(wd.air_temperature_c).toFixed(1)+"°C" : "32°C";
+  const humVal  = wd ? parseFloat(wd.relative_humidity).toFixed(1)+"%" : "68%";
+  const rainVal = wd ? parseFloat(wd.rainfall_mm).toFixed(1)+" mm" : "— mm";
+  const humNum  = wd ? parseFloat(wd.relative_humidity) : 68;
+  const tempNum = wd ? parseFloat(wd.air_temperature_c) : 32;
   const weather=[
-    {icon:"🌤️",label:"Temperature",val:"32°C",sub:"Feels like 36°C",bg:"#fef3c7",col:"#92400e"},
-    {icon:"💧",label:"Humidity",val:"68%",sub:"High humidity",bg:"#dbeafe",col:"#1e40af"},
-    {icon:"🌬️",label:"Wind Speed",val:"18 km/h",sub:"Southwest",bg:"#f0fdf4",col:"#166534"},
-    {icon:"🌧️",label:"Rain Chance",val:"35%",sub:"Tomorrow: 60%",bg:"#ede9fe",col:"#4c1d95"},
+    {icon:"🌡️",label:"Temperature",val:tempVal,sub:dd?"Region: "+dd.region:"Live reading",bg:"#fef3c7",col:"#92400e"},
+    {icon:"💧",label:"Humidity",val:humVal,sub:humNum>75?"High humidity":"Moderate humidity",bg:"#dbeafe",col:"#1e40af"},
+    {icon:"🌧️",label:"Rainfall",val:rainVal,sub:"Recorded rainfall",bg:"#ede9fe",col:"#4c1d95"},
+    {icon:"🌾",label:"Location",val:dd?dd.city:dbSelectedCity||"—",sub:dd?dd.state:dbSelectedState||"Select location",bg:"#f0fdf4",col:"#166534"},
   ];
   const alerts=[
-    {icon:"⚠️",text:"High humidity alert — Risk of fungal diseases. Apply preventive fungicide.",type:"warn"},
+    humNum > 75
+      ? {icon:"⚠️",text:`High humidity alert (${humVal}) — Risk of fungal diseases for ${dd?dd.crop_type:'crops'}. Apply preventive fungicide.`,type:"warn"}
+      : {icon:"✅",text:`Humidity at ${humVal} — Conditions are moderate. Monitor crops for moisture stress.`,type:"good"},
     {icon:"💡",text:"Good conditions for irrigation early morning (5–7 AM) to reduce evaporation.",type:"info"},
-    {icon:"🌾",text:"Optimal harvest window for wheat: Next 3–5 days before expected rain.",type:"good"},
+    tempNum>35
+      ? {icon:"🔥",text:`High temperature alert (${tempVal}) — Provide adequate irrigation and shade if possible.`,type:"warn"}
+      : {icon:"🌾",text:`Temperature at ${tempVal} — Suitable growing conditions for most ${dd?dd.region+' region':''} crops.`,type:"good"},
   ];
   return `
   <section id="weather-section">
@@ -950,6 +1126,8 @@ function renderWeather(t) {
         <h2>${t.weatherHead}</h2>
         <p>${dateStr}</p>
       </div>
+      ${renderLocationSelectors(false)}
+      ${dbLoading ? dbLoadingSpinner('Loading weather data...') : ''}
       <div class="weather-cards">
         ${weather.map(w=>`
           <div class="card hover-lift weather-card" style="background:${w.bg};border:1px solid ${w.col}22">
@@ -983,16 +1161,23 @@ function renderWeatherCharts() {
   const tc = document.getElementById("chart-temp");
   const rc = document.getElementById("chart-rain");
   if (!tc || !rc) return;
-  const labels = WEATHER_DATA.map(d=>d.day);
+  // If we have DB weather data, pin today's actual values into chart
+  const wd = dbWeatherData && dbWeatherData[0];
+  const chartData = wd ? WEATHER_DATA.map((d,i)=>({
+    ...d,
+    temp: i===0 ? parseFloat(wd.air_temperature_c) : d.temp,
+    rain: i===0 ? Math.min(100,parseFloat(wd.rainfall_mm)*3) : d.rain
+  })) : WEATHER_DATA;
+  const labels = chartData.map(d=>d.day);
   const commonOpts = {responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y}}},scales:{x:{grid:{display:false},ticks:{color:"#5a8c6e",font:{size:12}}},y:{display:false}}};
   weatherChartT = new Chart(tc.getContext("2d"),{
     type:"line",
-    data:{labels,datasets:[{data:WEATHER_DATA.map(d=>d.temp),borderColor:"#2d8653",fill:true,backgroundColor:"rgba(82,183,136,.15)",borderWidth:2.5,pointRadius:3,tension:.4,label:"Temp °C"}]},
+    data:{labels,datasets:[{data:chartData.map(d=>d.temp),borderColor:"#2d8653",fill:true,backgroundColor:"rgba(82,183,136,.15)",borderWidth:2.5,pointRadius:3,tension:.4,label:"Temp °C"}]},
     options:{...commonOpts}
   });
   weatherChartR = new Chart(rc.getContext("2d"),{
     type:"bar",
-    data:{labels,datasets:[{data:WEATHER_DATA.map(d=>d.rain),backgroundColor:"#95d5b2",borderRadius:4,label:"Rain %"}]},
+    data:{labels,datasets:[{data:chartData.map(d=>d.rain),backgroundColor:"#95d5b2",borderRadius:4,label:"Rain %"}]},
     options:{...commonOpts}
   });
 }
@@ -1060,24 +1245,45 @@ function addToCart(id) {
 
 // ─── DASHBOARD ──────────────────────────────────────────────────────
 function renderDash(t) {
+  const dd = dbDashData && dbDashData[0];
+  const sd = dbSoilData && dbSoilData[0];
+  const wd = dbWeatherData && dbWeatherData[0];
+  const hi = dbHealthData && dbHealthData[0] ? dbHealthData[0].crop_health_index : null;
+  // Build KPIs from DB data if available
+  const healthPct = hi !== null ? hi+"%" : "68%";
+  const healthTrend = hi !== null ? (hi>=75?"+Good":hi>=50?"~Fair":"-Poor") : "+4%";
+  const diseasePct = hi !== null ? (100-hi)+"%" : "12%";
+  const moistureVal = sd ? parseFloat(sd.soil_moisture).toFixed(1)+"%" : "—";
+  const tempVal = wd ? parseFloat(wd.air_temperature_c).toFixed(1)+"°C" : "—";
   const kpis=[
-    {icon:"🌿",label:"Healthy Crops",val:"68%",trend:"+4%",up:true,bg:"#d8f3dc",col:"#1a5c38"},
-    {icon:"🦠",label:"Disease Alerts",val:"12%",trend:"-3%",up:false,bg:"#fee2e2",col:"#991b1b"},
-    {icon:"💧",label:"Water Used",val:"1,240 L",trend:"-8%",up:false,bg:"#dbeafe",col:"#1e40af"},
-    {icon:"🌾",label:"Harvest Ready",val:"3 crops",trend:"On time",up:true,bg:"#fef3c7",col:"#92400e"},
+    {icon:"🌿",label:"Crop Health Index",val:healthPct,trend:healthTrend,up:hi>=75,bg:"#d8f3dc",col:"#1a5c38"},
+    {icon:"💧",label:"Soil Moisture",val:moistureVal,trend:"Live DB",up:true,bg:"#dbeafe",col:"#1e40af"},
+    {icon:"🌡️",label:"Temperature",val:tempVal,trend:"Live DB",up:true,bg:"#fef3c7",col:"#92400e"},
+    {icon:"🌾",label:"Primary Crop",val:dd?dd.crop_type:"—",trend:dd?dd.region:"",up:true,bg:"#f0fdf4",col:"#166534"},
   ];
-  const recos=[
-    {icon:"💊",title:"Apply DAP fertilizer",desc:"To Plot B wheat — nitrogen deficiency detected in last scan",priority:"High"},
-    {icon:"💧",title:"Reduce irrigation",desc:"Soil moisture at 78% — skip tomorrow's watering to prevent root rot",priority:"Medium"},
-    {icon:"🌿",title:"Harvest cotton by Friday",desc:"Weather window favorable before predicted rains Saturday–Sunday",priority:"High"},
-  ];
+  // Smart recommendations based on DB data
+  const recos = [];
+  if (sd && parseFloat(sd.soil_moisture) > 75) recos.push({icon:"💧",title:"Reduce irrigation",desc:`Soil moisture at ${parseFloat(sd.soil_moisture).toFixed(1)}% — skip next watering cycle to prevent root rot`,priority:"High"});
+  if (sd && parseFloat(sd.soil_ph) < 6) recos.push({icon:"🧪",title:"Soil pH correction needed",desc:`Current pH ${parseFloat(sd.soil_ph).toFixed(1)} is acidic. Apply lime to raise pH for better ${dd?dd.crop_type+' ':''}yield`,priority:"High"});
+  if (sd && parseFloat(sd.soil_ph) > 8) recos.push({icon:"🧪",title:"Soil is too alkaline",desc:`pH ${parseFloat(sd.soil_ph).toFixed(1)} — apply sulfur or organic compost to improve nutrient absorption`,priority:"Medium"});
+  if (wd && parseFloat(wd.relative_humidity) > 75) recos.push({icon:"🌿",title:"Fungal disease risk",desc:`Humidity at ${parseFloat(wd.relative_humidity).toFixed(1)}% — apply preventive fungicide on ${dd?dd.crop_type:'crops'}`,priority:"High"});
+  if (wd && parseFloat(wd.air_temperature_c) > 38) recos.push({icon:"🔥",title:"Heat stress alert",desc:`Temperature ${parseFloat(wd.air_temperature_c).toFixed(1)}°C — increase irrigation frequency and provide shading`,priority:"High"});
+  if (hi !== null && hi < 50) recos.push({icon:"🚨",title:"Low crop health detected",desc:`Health index at ${hi}% — inspect fields for disease/pest damage and consult agronomist`,priority:"High"});
+  if (recos.length === 0) {
+    recos.push({icon:"💊",title:"Apply DAP fertilizer",desc:"Recommended at sowing stage for better root development and early growth",priority:"Medium"});
+    recos.push({icon:"🌿",title:"Monitor crop regularly",desc:"Regular scouting helps catch pest and disease issues early before spread",priority:"Low"});
+    recos.push({icon:"📊",title:"Track irrigation schedule",desc:"Maintain irrigation logs for better water management and yield optimization",priority:"Low"});
+  }
   return `
   <section id="dash-section">
     <div style="max-width:1100px;margin:0 auto">
       <div class="section-head">
         <div class="tag tag-green" style="margin-bottom:12px">📊 Analytics</div>
         <h2>${t.dashHead}</h2>
+        ${dd ? `<p style="margin-top:8px;font-size:15px;color:var(--tl)">📍 Showing data for <strong>${dd.city}, ${dd.state}</strong></p>` : ''}
       </div>
+      ${renderLocationSelectors(false)}
+      ${dbLoading ? dbLoadingSpinner('Loading dashboard data...') : ''}
       <div class="kpi-grid">
         ${kpis.map(k=>`
           <div class="card hover-lift kpi-card" style="background:${k.bg};border:1px solid ${k.col}22">
@@ -1093,7 +1299,7 @@ function renderDash(t) {
         <div class="card chart-box">
           <h3>🌱 Crop Health</h3>
           <canvas id="chart-health" height="180"></canvas>
-          <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:12px">
+          <div id="health-legend" style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:12px">
             ${HEALTH_DATA.map((d,i)=>`
               <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--tl)">
                 <span style="width:10px;height:10px;border-radius:50%;background:${PIE_COLORS[i]};display:inline-block"></span>
@@ -1136,9 +1342,22 @@ function renderDashCharts() {
     },
     options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+" q"}}},scales:{x:{grid:{display:false},ticks:{color:"#5a8c6e",font:{size:12}}},y:{ticks:{color:"#5a8c6e",font:{size:12}},grid:{color:"#e8f5ee"}}}}
   });
+  const hi = dbHealthData && dbHealthData[0] ? dbHealthData[0].crop_health_index : null;
+  const pieData = hi !== null ? [
+    {name:"Healthy",value:hi},
+    {name:"At Risk",value:Math.max(0,Math.min(30,100-hi-Math.max(0,100-hi-20)))},
+    {name:"Diseased",value:Math.max(0,100-hi-Math.max(0,Math.min(30,100-hi-Math.max(0,100-hi-20))))}
+  ] : HEALTH_DATA;
+  // Update the legend text in DOM if possible
+  const legendEl = document.getElementById("health-legend");
+  if (legendEl) legendEl.innerHTML = pieData.map((d,i)=>`
+    <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--tl)">
+      <span style="width:10px;height:10px;border-radius:50%;background:${PIE_COLORS[i]};display:inline-block"></span>
+      ${d.name} (${d.value}%)
+    </div>`).join("");
   dashChartP = new Chart(pc.getContext("2d"),{
     type:"doughnut",
-    data:{labels:HEALTH_DATA.map(d=>d.name),datasets:[{data:HEALTH_DATA.map(d=>d.value),backgroundColor:PIE_COLORS,borderWidth:0}]},
+    data:{labels:pieData.map(d=>d.name),datasets:[{data:pieData.map(d=>d.value),backgroundColor:PIE_COLORS,borderWidth:0}]},
     options:{responsive:true,cutout:"60%",plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed}%`}}}}
   });
 }
@@ -1315,21 +1534,35 @@ function stopVoice() {
 }
 
 // ─── BOOT ───────────────────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded",()=>{
+document.addEventListener("DOMContentLoaded",async ()=>{
+  // Start rendering immediately with no DB data
   renderApp();
   initChat();
-  // Animate stats after hero renders
   setTimeout(animateStats, 100);
+  // Load states from Django API in background
+  await loadStates();
+  // If user is on a data section already, re-render with DB data
+  if (["crops","soil","weather","dash"].includes(section)) {
+    renderMainSection(T[lang]);
+    if (section === "weather") setTimeout(()=>renderWeatherCharts(), 50);
+    if (section === "dash") setTimeout(()=>renderDashCharts(), 50);
+  }
 });
 
-// Re-animate stats when going home
+// Re-animate stats when going home; load DB data for data sections
 const origNavigate = navigate;
-window.navigate = function(sec) {
+window.navigate = async function(sec) {
   section = sec;
   renderApp();
   window.scrollTo({top:0,behavior:"smooth"});
   if (sec === "home") setTimeout(animateStats,150);
+  // If DB not loaded yet and going to a data section, load now
+  if (["crops","soil","weather","dash"].includes(sec) && dbStates.length === 0) {
+    await loadStates();
+    renderMainSection(T[lang]);
+    if (sec === "weather") setTimeout(()=>renderWeatherCharts(), 50);
+    if (sec === "dash") setTimeout(()=>renderDashCharts(), 50);
+  }
 };
 </script>
 </body>
-</html>

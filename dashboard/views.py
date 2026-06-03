@@ -34,3 +34,77 @@ def get_crops(request):
     )
 
     return JsonResponse(crops, safe=False)
+
+def get_regions(request):
+    regions = list(
+        FarmData.objects.values_list(
+            "region",
+            flat=True
+        ).distinct()
+    )
+
+    return JsonResponse(regions, safe=False)
+
+def get_weather(request):
+    city = request.GET.get("city")
+
+    data = list(
+        FarmData.objects.filter(
+            city=city
+        ).values(
+            "air_temperature_c",
+            "relative_humidity",
+            "rainfall_mm"
+        )[:1]
+    )
+
+    return JsonResponse(data, safe=False)
+
+def get_soil(request):
+    city = request.GET.get("city")
+
+    data = list(
+        FarmData.objects.filter(
+            city=city
+        ).values(
+            "soil_moisture",
+            "soil_ph"
+        )[:1]
+    )
+
+    return JsonResponse(data, safe=False)
+
+def get_health(request):
+    city = request.GET.get("city")
+
+    data = list(
+        FarmData.objects.filter(
+            city=city
+        ).values(
+            "crop_health_index"
+        )[:1]
+    )
+
+    return JsonResponse(data, safe=False)
+
+def get_dashboard(request):
+    city = request.GET.get("city")
+
+    data = list(
+        FarmData.objects.filter(
+            city=city
+        ).values(
+            "state",
+            "city",
+            "crop_type",
+            "air_temperature_c",
+            "relative_humidity",
+            "rainfall_mm",
+            "soil_moisture",
+            "soil_ph",
+            "crop_health_index",
+            "region"
+        )[:1]
+    )
+
+    return JsonResponse(data, safe=False)
